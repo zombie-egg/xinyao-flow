@@ -1,0 +1,6 @@
+import nodemailer from 'nodemailer';import crypto from 'node:crypto';
+export function normalizeEmail(email:string){return email.trim().toLowerCase()}
+export function hashEmailCode(email:string,code:string){return crypto.createHmac('sha256',process.env.AUTH_SECRET||'development-secret').update(`${normalizeEmail(email)}:${code}`).digest('hex')}
+export function verifyEmailCodeHash(expected:string,actual:string){const a=Buffer.from(expected,'hex'),b=Buffer.from(actual,'hex');return a.length===b.length&&crypto.timingSafeEqual(a,b)}
+export function mailTransport(){const user=process.env.QQ_EMAIL,pass=process.env.QQ_EMAIL_AUTH_CODE;if(!user||!pass)throw new Error('EMAIL_NOT_CONFIGURED');return nodemailer.createTransport({host:'smtp.qq.com',port:465,secure:true,auth:{user,pass}})}
+export async function sendRegistrationCode(to:string,code:string){const from=process.env.QQ_EMAIL!;await mailTransport().sendMail({from:`企业业务管理系统 <${from}>`,to,subject:'企业业务管理系统注册验证码',text:`您的注册验证码是：${code}。验证码 10 分钟内有效，请勿转发给他人。`,html:`<div style="font-family:system-ui;padding:24px;color:#18181b"><h2>企业业务管理系统</h2><p>您的注册验证码：</p><div style="font-size:30px;font-weight:700;letter-spacing:8px;margin:20px 0">${code}</div><p style="color:#71717a">验证码 10 分钟内有效，请勿转发给他人。</p></div>`})}
