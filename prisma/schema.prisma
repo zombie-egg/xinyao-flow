@@ -270,21 +270,24 @@ model AnnualLeaveRule {
 }
 
 model Customer {
-  id          String     @id @default(cuid())
-  name        String
-  contact     String
-  phone       String
-  address     String?
-  contactInfo String?
-  remark      String?
-  ownerId     String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  owner       User       @relation(fields: [ownerId], references: [id])
-  contracts   Contract[]
-  orders      Order[]
+  id              String     @id @default(cuid())
+  name            String
+  nameNormalized  String     @default("")
+  contact         String
+  phone           String
+  phoneNormalized String     @default("")
+  address         String?
+  contactInfo     String?
+  remark          String?
+  ownerId         String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  owner           User       @relation(fields: [ownerId], references: [id])
+  contracts       Contract[]
+  orders          Order[]
 
   @@index([ownerId, name])
+  @@unique([nameNormalized, phoneNormalized])
 }
 
 model Contract {
