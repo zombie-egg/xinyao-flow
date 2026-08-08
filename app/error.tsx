@@ -1,0 +1,1 @@
+'use client';import {Button} from '@/components/ui/button';export default function ErrorPage({reset}:{reset:()=>void}){return <div className="grid min-h-[60vh] place-items-center text-center"><div><h2 className="text-xl font-semibold">页面暂时无法加载</h2><p className="mt-2 text-sm text-zinc-500">请稍后重试，错误已记录。</p><Button onClick={reset} className="mt-5">重新加载</Button></div></div>}

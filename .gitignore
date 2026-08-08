@@ -1,0 +1,13 @@
+node_modules
+.next
+.env
+.DS_Store
+coverage
+logs/
+*.tsbuildinfo
+uploads/*
+!uploads/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+prisma/*.db
+certificates/

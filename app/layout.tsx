@@ -1,0 +1,1 @@
+import './globals.css';export const metadata={title:'企业业务管理系统',description:'企业考勤、审批与业务管理'};export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="zh-CN"><body>{children}</body></html>}
