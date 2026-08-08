@@ -11,11 +11,13 @@ enum UserStatus {
   ACTIVE
   DISABLED
 }
+
 enum DepartmentCode {
   FINANCE
   SALES
   TECH
 }
+
 enum RoleCode {
   ADMIN
   FINANCE_MANAGER
@@ -25,12 +27,14 @@ enum RoleCode {
   TECH_MANAGER
   TECH_EMPLOYEE
 }
+
 enum AttendanceStatus {
   ON_TIME
   LATE
   ABSENT
   LEAVE
 }
+
 enum ApprovalStatus {
   DRAFT
   PENDING_MANAGER
@@ -40,15 +44,18 @@ enum ApprovalStatus {
   APPROVED
   REJECTED
 }
+
 enum LeaveType {
   ANNUAL
   PERSONAL
   BUSINESS_TRIP
 }
+
 enum ExceptionType {
   LATE
   ABSENT
 }
+
 enum ContractStatus {
   DRAFT
   SUBMITTED
@@ -57,6 +64,7 @@ enum ContractStatus {
   COMPLETED
   CANCELLED
 }
+
 enum OrderStatus {
   DRAFT
   PENDING_SALES_MANAGER
@@ -73,12 +81,14 @@ enum OrderStatus {
   REJECTED
   CANCELLED
 }
+
 enum ProcessStatus {
   NOT_REQUIRED
   PENDING
   PARTIAL
   COMPLETED
 }
+
 enum OrderApprovalStatus {
   DRAFT
   PENDING_SALES_MANAGER
@@ -89,11 +99,13 @@ enum OrderApprovalStatus {
   FINANCE_REJECTED
   ADMIN_REJECTED
 }
+
 enum TechnicalStatus {
   PENDING
   PROCESSING
   COMPLETED
 }
+
 enum NotificationType {
   APPROVAL
   CONTRACT
@@ -101,324 +113,341 @@ enum NotificationType {
   SYSTEM
 }
 
+enum EmailCodePurpose {
+  REGISTER
+  LOGIN
+  RESET
+}
+
 model Department {
-  id String @id @default(cuid())
-  code DepartmentCode @unique
-  name String @unique
-  users User[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String         @id @default(cuid())
+  code      DepartmentCode @unique
+  name      String         @unique
+  users     User[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 }
 
 model Role {
-  id String @id @default(cuid())
-  code RoleCode @unique
-  name String
-  users User[]
+  id          String           @id @default(cuid())
+  code        RoleCode         @unique
+  name        String
+  users       User[]
   permissions RolePermission[]
 }
 
 model Permission {
-  id String @id @default(cuid())
-  code String @unique
-  name String
+  id    String           @id @default(cuid())
+  code  String           @unique
+  name  String
   roles RolePermission[]
 }
 
 model RolePermission {
-  roleId String
+  roleId       String
   permissionId String
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
   @@id([roleId, permissionId])
 }
 
 model User {
-  id String @id @default(cuid())
-  name String
-  username String @unique
-  email String? @unique
-  emailVerifiedAt DateTime?
-  passwordHash String
-  phone String?
-  avatarUrl String?
-  departmentId String?
-  roleId String
-  jobTitle String
+  id                  String             @id @default(cuid())
+  name                String
+  username            String             @unique
+  email               String?            @unique
+  emailVerifiedAt     DateTime?
+  passwordHash        String
+  phone               String?
+  avatarUrl           String?
+  departmentId        String?
+  roleId              String
+  jobTitle            String
   employmentStartDate DateTime
-  workYears Int @default(0)
-  annualLeaveDays Decimal @default(0) @db.Decimal(5, 1)
-  annualLeaveUsed Decimal @default(0) @db.Decimal(5, 1)
-  status UserStatus @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  department Department? @relation(fields: [departmentId], references: [id])
-  role Role @relation(fields: [roleId], references: [id])
-  attendances Attendance[]
-  leaveRequests LeaveRequest[]
-  leaveApprovals LeaveApproval[]
-  customers Customer[]
-  contracts Contract[]
-  salesOrders Order[] @relation("SalesOrders")
-  financeOrders Order[] @relation("FinanceOrders")
-  technicalOrders Order[] @relation("TechnicalOrders")
-  orderApprovals ContractApproval[]
-  paymentsRecorded Payment[] @relation("RecordedPayments")
-  logs OperationLog[]
-  notifications Notification[]
+  workYears           Int                @default(0)
+  annualLeaveDays     Decimal            @default(0) @db.Decimal(5, 1)
+  annualLeaveUsed     Decimal            @default(0) @db.Decimal(5, 1)
+  status              UserStatus         @default(ACTIVE)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  department          Department?        @relation(fields: [departmentId], references: [id])
+  role                Role               @relation(fields: [roleId], references: [id])
+  attendances         Attendance[]
+  leaveRequests       LeaveRequest[]
+  leaveApprovals      LeaveApproval[]
+  customers           Customer[]
+  contracts           Contract[]
+  salesOrders         Order[]            @relation("SalesOrders")
+  financeOrders       Order[]            @relation("FinanceOrders")
+  technicalOrders     Order[]            @relation("TechnicalOrders")
+  orderApprovals      ContractApproval[]
+  paymentsRecorded    Payment[]          @relation("RecordedPayments")
+  logs                OperationLog[]
+  notifications       Notification[]
 }
 
 model Attendance {
-  id String @id @default(cuid())
-  userId String
-  date DateTime
-  checkInTime DateTime?
-  checkOutTime DateTime?
-  checkInLatitude Float?
-  checkInLongitude Float?
-  checkInAccuracy Float?
-  checkOutLatitude Float?
+  id                String               @id @default(cuid())
+  userId            String
+  date              DateTime
+  checkInTime       DateTime?
+  checkOutTime      DateTime?
+  checkInLatitude   Float?
+  checkInLongitude  Float?
+  checkInAccuracy   Float?
+  checkOutLatitude  Float?
   checkOutLongitude Float?
-  checkOutAccuracy Float?
-  distanceMeters Float?
-  status AttendanceStatus
-  remark String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id])
-  exception AttendanceException?
+  checkOutAccuracy  Float?
+  distanceMeters    Float?
+  status            AttendanceStatus
+  remark            String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  user              User                 @relation(fields: [userId], references: [id])
+  exception         AttendanceException?
+
   @@unique([userId, date])
   @@index([date, status])
 }
 
 model AttendanceException {
-  id String @id @default(cuid())
-  attendanceId String @unique
-  type ExceptionType
-  reason String?
-  status ApprovalStatus @default(PENDING_MANAGER)
+  id                String          @id @default(cuid())
+  attendanceId      String          @unique
+  type              ExceptionType
+  reason            String?
+  status            ApprovalStatus  @default(PENDING_MANAGER)
   currentApproverId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  attendance Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
-  approvals LeaveApproval[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  attendance        Attendance      @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  approvals         LeaveApproval[]
 }
 
 model LeaveRequest {
-  id String @id @default(cuid())
-  userId String
-  type LeaveType
-  startDate DateTime
-  endDate DateTime
-  days Decimal @db.Decimal(5, 1)
-  reason String?
-  destination String?
-  tripBudgetRequired Boolean @default(false)
-  estimatedBudget Decimal? @db.Decimal(12, 2)
-  budgetDetails Json?
-  remark String?
-  status ApprovalStatus @default(PENDING_MANAGER)
-  leaveDeducted Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id])
-  approvals LeaveApproval[]
+  id                 String          @id @default(cuid())
+  userId             String
+  type               LeaveType
+  startDate          DateTime
+  endDate            DateTime
+  days               Decimal         @db.Decimal(5, 1)
+  reason             String?
+  destination        String?
+  tripBudgetRequired Boolean         @default(false)
+  estimatedBudget    Decimal?        @db.Decimal(12, 2)
+  budgetDetails      Json?
+  remark             String?
+  status             ApprovalStatus  @default(PENDING_MANAGER)
+  leaveDeducted      Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  user               User            @relation(fields: [userId], references: [id])
+  approvals          LeaveApproval[]
+
   @@index([status, createdAt])
 }
 
 model LeaveApproval {
-  id String @id @default(cuid())
-  leaveRequestId String?
+  id                    String               @id @default(cuid())
+  leaveRequestId        String?
   attendanceExceptionId String?
-  approverId String
-  approverRole RoleCode
-  result String
-  comment String?
-  createdAt DateTime @default(now())
-  leaveRequest LeaveRequest? @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
-  attendanceException AttendanceException? @relation(fields: [attendanceExceptionId], references: [id], onDelete: Cascade)
-  approver User @relation(fields: [approverId], references: [id])
+  approverId            String
+  approverRole          RoleCode
+  result                String
+  comment               String?
+  createdAt             DateTime             @default(now())
+  leaveRequest          LeaveRequest?        @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  attendanceException   AttendanceException? @relation(fields: [attendanceExceptionId], references: [id], onDelete: Cascade)
+  approver              User                 @relation(fields: [approverId], references: [id])
 }
 
 model AnnualLeaveRule {
-  id String @id @default(cuid())
-  minWorkYears Int @unique
-  days Decimal @db.Decimal(5, 1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  minWorkYears Int      @unique
+  days         Decimal  @db.Decimal(5, 1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Customer {
-  id String @id @default(cuid())
-  name String
-  contact String
-  phone String
-  address String?
+  id          String     @id @default(cuid())
+  name        String
+  contact     String
+  phone       String
+  address     String?
   contactInfo String?
-  remark String?
-  ownerId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  owner User @relation(fields: [ownerId], references: [id])
-  contracts Contract[]
-  orders Order[]
+  remark      String?
+  ownerId     String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  owner       User       @relation(fields: [ownerId], references: [id])
+  contracts   Contract[]
+  orders      Order[]
+
   @@index([ownerId, name])
 }
 
 model Contract {
-  id String @id @default(cuid())
-  contractNumber String? @unique
-  name String
-  customerId String
-  salesUserId String
-  amount Decimal @db.Decimal(14, 2)
-  dealPrice Decimal @db.Decimal(14, 2)
-  contractDate DateTime
-  fileUrl String?
-  fileName String?
-  fileSize Int?
-  fileType String?
-  status ContractStatus @default(DRAFT)
-  remark String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  customer Customer @relation(fields: [customerId], references: [id])
-  salesUser User @relation(fields: [salesUserId], references: [id])
-  order Order?
+  id             String         @id @default(cuid())
+  contractNumber String?        @unique
+  name           String
+  customerId     String
+  salesUserId    String
+  amount         Decimal        @db.Decimal(14, 2)
+  dealPrice      Decimal        @db.Decimal(14, 2)
+  contractDate   DateTime
+  fileUrl        String?
+  fileName       String?
+  fileSize       Int?
+  fileType       String?
+  status         ContractStatus @default(DRAFT)
+  remark         String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  customer       Customer       @relation(fields: [customerId], references: [id])
+  salesUser      User           @relation(fields: [salesUserId], references: [id])
+  order          Order?
+
   @@index([salesUserId, status])
 }
 
 model Order {
-  id String @id @default(cuid())
-  orderNumber String? @unique
-  contractId String @unique
-  customerId String
-  salesUserId String
-  financeUserId String?
-  technicalUserId String?
-  name String @default("未命名订单")
-  contact String?
-  phone String?
-  address String?
-  contactInfo String?
-  projectRequirements String @default("")
-  remark String?
-  amount Decimal @db.Decimal(14, 2)
-  approvalStatus OrderApprovalStatus @default(DRAFT)
-  technicalStatus TechnicalStatus @default(PENDING)
-  invoiceRequired Boolean?
-  invoiceStatus ProcessStatus @default(NOT_REQUIRED)
-  paymentStatus ProcessStatus @default(NOT_REQUIRED)
-  paidAmount Decimal @default(0) @db.Decimal(14, 2)
-  status OrderStatus @default(DRAFT)
-  approvedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  contract Contract @relation(fields: [contractId], references: [id])
-  customer Customer @relation(fields: [customerId], references: [id])
-  salesUser User @relation("SalesOrders", fields: [salesUserId], references: [id])
-  financeUser User? @relation("FinanceOrders", fields: [financeUserId], references: [id])
-  technicalUser User? @relation("TechnicalOrders", fields: [technicalUserId], references: [id])
-  invoice Invoice?
-  payments Payment[]
-  approvals ContractApproval[]
+  id                  String              @id @default(cuid())
+  orderNumber         String?             @unique
+  contractId          String              @unique
+  customerId          String
+  salesUserId         String
+  financeUserId       String?
+  technicalUserId     String?
+  name                String              @default("未命名订单")
+  contact             String?
+  phone               String?
+  address             String?
+  contactInfo         String?
+  projectRequirements String              @default("")
+  remark              String?
+  amount              Decimal             @db.Decimal(14, 2)
+  approvalStatus      OrderApprovalStatus @default(DRAFT)
+  technicalStatus     TechnicalStatus     @default(PENDING)
+  invoiceRequired     Boolean?
+  invoiceStatus       ProcessStatus       @default(NOT_REQUIRED)
+  paymentStatus       ProcessStatus       @default(NOT_REQUIRED)
+  paidAmount          Decimal             @default(0) @db.Decimal(14, 2)
+  status              OrderStatus         @default(DRAFT)
+  approvedAt          DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  contract            Contract            @relation(fields: [contractId], references: [id])
+  customer            Customer            @relation(fields: [customerId], references: [id])
+  salesUser           User                @relation("SalesOrders", fields: [salesUserId], references: [id])
+  financeUser         User?               @relation("FinanceOrders", fields: [financeUserId], references: [id])
+  technicalUser       User?               @relation("TechnicalOrders", fields: [technicalUserId], references: [id])
+  invoice             Invoice?
+  payments            Payment[]
+  approvals           ContractApproval[]
+
   @@index([status, createdAt])
 }
 
 model Invoice {
-  id String @id @default(cuid())
-  orderId String @unique
-  amount Decimal? @db.Decimal(14, 2)
-  number String?
+  id       String    @id @default(cuid())
+  orderId  String    @unique
+  amount   Decimal?  @db.Decimal(14, 2)
+  number   String?
   issuedAt DateTime?
-  note String?
-  fileUrl String?
+  note     String?
+  fileUrl  String?
   fileName String?
   fileSize Int?
   fileType String?
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
-  id String @id @default(cuid())
-  orderId String
+  id            String    @id @default(cuid())
+  orderId       String
   financeUserId String?
-  amount Decimal @db.Decimal(14, 2)
-  reference String?
-  paidAt DateTime?
-  note String?
-  receiptUrl String?
-  receiptName String?
-  receiptSize Int?
-  receiptType String?
-  createdAt DateTime @default(now())
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  financeUser User? @relation("RecordedPayments", fields: [financeUserId], references: [id], onDelete: SetNull)
+  amount        Decimal   @db.Decimal(14, 2)
+  reference     String?
+  paidAt        DateTime?
+  note          String?
+  receiptUrl    String?
+  receiptName   String?
+  receiptSize   Int?
+  receiptType   String?
+  createdAt     DateTime  @default(now())
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  financeUser   User?     @relation("RecordedPayments", fields: [financeUserId], references: [id], onDelete: SetNull)
+
   @@index([orderId, createdAt])
 }
 
 model ContractApproval {
-  id String @id @default(cuid())
-  orderId String
+  id         String   @id @default(cuid())
+  orderId    String
   approverId String
-  stage String
-  result String
-  comment String?
-  createdAt DateTime @default(now())
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  approver User @relation(fields: [approverId], references: [id])
+  stage      String
+  result     String
+  comment    String?
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  approver   User     @relation(fields: [approverId], references: [id])
+
   @@index([orderId, createdAt])
 }
 
 model CompanySetting {
-  id String @id @default("company")
-  companyName String @default("企业业务管理系统")
-  logoUrl String?
-  address String?
-  latitude Float?
-  longitude Float?
-  attendanceRadius Int @default(200)
-  workStart String @default("09:00")
-  workEnd String @default("18:00")
-  absenceCutoff String @default("12:00")
-  updatedAt DateTime @updatedAt
+  id               String   @id @default("company")
+  companyName      String   @default("企业业务管理系统")
+  logoUrl          String?
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  attendanceRadius Int      @default(200)
+  workStart        String   @default("09:00")
+  workEnd          String   @default("18:00")
+  absenceCutoff    String   @default("12:00")
+  updatedAt        DateTime @updatedAt
 }
 
 model Notification {
-  id String @id @default(cuid())
-  userId String
-  type NotificationType
-  title String
-  content String
-  targetId String?
-  readAt DateTime?
-  createdAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  content   String
+  targetId  String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, readAt])
 }
 
 model OperationLog {
-  id String @id @default(cuid())
-  userId String?
-  action String
-  module String
-  targetId String?
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  module      String
+  targetId    String?
   description String
-  ip String?
-  userAgent String?
-  beforeData Json?
-  afterData Json?
-  createdAt DateTime @default(now())
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ip          String?
+  userAgent   String?
+  beforeData  Json?
+  afterData   Json?
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   @@index([createdAt, module])
 }
 
 model EmailVerification {
-  email String @id
-  codeHash String
-  expiresAt DateTime
-  attempts Int @default(0)
-  lastSentAt DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  email      String           @id
+  purpose    EmailCodePurpose @default(REGISTER)
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int              @default(0)
+  lastSentAt DateTime         @default(now())
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 }

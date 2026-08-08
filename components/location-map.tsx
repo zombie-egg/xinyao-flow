@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import {cleanPublicValue} from '@/lib/public-config';
 
 type Point={latitude:number;longitude:number;accuracy?:number};
 type LngLat={getLng:()=>number;getLat:()=>number};
@@ -20,7 +21,7 @@ function convert(api:AMapApi,point:Point){return new Promise<[number,number]>((r
 export function LocationMap({company,current,radius}:{company:Point;current:Point|null;radius:number}){
   const node=useRef<HTMLDivElement>(null),[error,setError]=useState(''),[address,setAddress]=useState('');
   useEffect(()=>{let disposed=false,map:MapInstance|null=null;async function render(){
-    const key=process.env.NEXT_PUBLIC_AMAP_KEY,securityJsCode=process.env.NEXT_PUBLIC_AMAP_SECURITY_CODE;
+    const key=cleanPublicValue(process.env.NEXT_PUBLIC_AMAP_KEY),securityJsCode=cleanPublicValue(process.env.NEXT_PUBLIC_AMAP_SECURITY_CODE);
     if(!key||!securityJsCode){setError('高德地图 Key 尚未配置');return}
     if(!node.current)return;
     try{

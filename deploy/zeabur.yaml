@@ -126,6 +126,9 @@ spec:
           envFrom:
             - secretRef:
                 name: xinyao-secrets
+          env:
+            - name: UPLOAD_DIR
+              value: /data/uploads
           readinessProbe:
             httpGet:
               path: /login
@@ -136,7 +139,7 @@ spec:
             - name: source
               mountPath: /src
             - name: uploads
-              mountPath: /src/public/uploads
+              mountPath: /data/uploads
       volumes:
         - name: source
           emptyDir: {}

@@ -1,0 +1,5 @@
+import {readFile,stat} from 'node:fs/promises';import path from 'node:path';import {safeUploadPath} from '@/lib/uploads';
+export const runtime='nodejs';export const dynamic='force-dynamic';
+const contentTypes:Record<string,string>={'.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp','.pdf':'application/pdf','.doc':'application/msword','.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
+
+export async function GET(_:Request,{params}:{params:Promise<{path:string[]}>}){try{const parts=(await params).path,filePath=safeUploadPath(parts);if(!filePath)return new Response('Not found',{status:404});const info=await stat(filePath);if(!info.isFile())return new Response('Not found',{status:404});const data=await readFile(filePath),type=contentTypes[path.extname(filePath).toLowerCase()]||'application/octet-stream';return new Response(new Uint8Array(data),{headers:{'content-type':type,'content-length':String(info.size),'cache-control':'public, max-age=31536000, immutable','x-content-type-options':'nosniff'}})}catch{return new Response('Not found',{status:404})}}

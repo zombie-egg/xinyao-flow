@@ -1,0 +1,1 @@
+export function cleanPublicValue(value:string|undefined){const trimmed=value?.trim()||'';return trimmed.length>=2&&((trimmed.startsWith('"')&&trimmed.endsWith('"'))||(trimmed.startsWith("'")&&trimmed.endsWith("'")))?trimmed.slice(1,-1):trimmed}
