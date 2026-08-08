@@ -1,0 +1,31 @@
+name: Deploy to Zeabur
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-zeabur
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install SSH client helper
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy and verify
+        env:
+          SSH_HOST: ${{ secrets.ZEABUR_SSH_HOST }}
+          SSH_USER: ${{ secrets.ZEABUR_SSH_USER }}
+          SSHPASS: ${{ secrets.ZEABUR_SSH_PASSWORD }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          sshpass -e scp deploy/zeabur.yaml "$SSH_USER@$SSH_HOST:/tmp/xinyao-zeabur.yaml"
+          sshpass -e ssh "$SSH_USER@$SSH_HOST" 'sudo k3s kubectl apply -f /tmp/xinyao-zeabur.yaml && sudo k3s kubectl -n environment-6a6356942007fc25ea3603b2 rollout restart deployment/xinyao-flow && sudo k3s kubectl -n environment-6a6356942007fc25ea3603b2 rollout status deployment/xinyao-flow --timeout=600s && curl --fail --silent --show-error https://xinyao.zeabur.app/login >/dev/null'

@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: xinyao-postgres-data
+  namespace: environment-6a6356942007fc25ea3603b2
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xinyao-postgres
+  namespace: environment-6a6356942007fc25ea3603b2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xinyao-postgres
+  template:
+    metadata:
+      labels:
+        app: xinyao-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: enterprise_ops
+            - name: POSTGRES_USER
+              value: xinyao
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: xinyao-secrets
+                  key: POSTGRES_PASSWORD
+          readinessProbe:
+            exec:
+              command: [sh, -c, "pg_isready -U xinyao -d enterprise_ops"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: xinyao-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xinyao-postgres
+  namespace: environment-6a6356942007fc25ea3603b2
+spec:
+  selector:
+    app: xinyao-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: xinyao-uploads
+  namespace: environment-6a6356942007fc25ea3603b2
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xinyao-flow
+  namespace: environment-6a6356942007fc25ea3603b2
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      zeabur_service_id: 6a6356a58ec01e16bfb329d0e
+      zeabur_type: user-service
+  template:
+    metadata:
+      labels:
+        app: xinyao-flow
+        zeabur_service_id: 6a6356a58ec01e16bfb329d0e
+        zeabur_type: user-service
+    spec:
+      initContainers:
+        - name: fetch-source
+          image: alpine/git:2.49.1
+          command: [sh, -c]
+          args:
+            - rm -rf /src/* /src/.[!.]* /src/..?* 2>/dev/null || true; git clone --depth=1 --branch=main https://github.com/zombie-egg/xinyao-flow.git /src
+          volumeMounts:
+            - name: source
+              mountPath: /src
+        - name: build-and-migrate
+          image: node:20-bookworm
+          workingDir: /src
+          command: [sh, -c]
+          args:
+            - npm ci --include=dev && npx prisma migrate deploy && npm run build
+          envFrom:
+            - secretRef:
+                name: xinyao-secrets
+          volumeMounts:
+            - name: source
+              mountPath: /src
+      containers:
+        - name: app
+          image: node:20-bookworm
+          workingDir: /src
+          command: [npm, run, start, --, -p, "8080"]
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: xinyao-secrets
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: source
+              mountPath: /src
+            - name: uploads
+              mountPath: /src/public/uploads
+      volumes:
+        - name: source
+          emptyDir: {}
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: xinyao-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-6a774c58ec01e16bfb329d0e
+  namespace: environment-6a6356942007fc25ea3603b2
+spec:
+  selector:
+    zeabur_service_id: 6a6356a58ec01e16bfb329d0e
+    zeabur_type: user-service
+  ports:
+    - name: web
+      port: 8080
+      targetPort: 8080
