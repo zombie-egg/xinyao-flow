@@ -19,7 +19,9 @@ PostgreSQL 可使用 Docker：
 docker run --name enterprise-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=enterprise_ops -p 5432:5432 -d postgres:16
 ```
 
-默认管理员账号为 `admin`，也可使用 `.env` 中的 `QQ_EMAIL` 登录。Seed 密码为 `ChangeMe123!`，可通过 `SEED_PASSWORD` 修改。员工通过 `/register` 获取邮箱验证码注册，系统自动生成内部账号并分配角色；管理员账号只能后台创建。
+默认管理员账号为 `admin`，也可使用 `.env` 中的 `QQ_EMAIL` 登录。登录页支持密码登录和邮箱验证码登录，并提供邮箱注册、找回密码。Seed 密码为 `ChangeMe123!`，可通过 `SEED_PASSWORD` 修改。员工通过 `/register` 获取邮箱验证码注册，系统自动生成内部账号并分配角色；管理员账号只能后台创建。
+
+头像、企业 Logo、合同、发票和回款票据统一保存到 `UPLOAD_DIR`（未配置时使用 `public/uploads`）。生产部署应将该目录挂载到持久化卷，应用通过 `/uploads/*` 路由读取文件。
 
 ## 订单业务流程
 
