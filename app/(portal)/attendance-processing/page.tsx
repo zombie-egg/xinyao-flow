@@ -155,7 +155,11 @@ export default async function AttendanceProcessing({
                   </p>
                 </div>
                 {view === "pending" ? (
-                  <AttendanceProcessingActions id={item.id} />
+                  item.reason ? (
+                    <AttendanceProcessingActions id={item.id} />
+                  ) : (
+                    <Badge>等待员工说明</Badge>
+                  )
                 ) : (
                   <Badge
                     className={

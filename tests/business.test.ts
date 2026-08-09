@@ -5,6 +5,7 @@ import { safeUploadPath } from "../lib/uploads";
 import { currentWorkInfo, fullWorkYears } from "../lib/work-years";
 import {
   attendanceResult,
+  attendanceWindows,
   chinaAttendanceDays,
   timeOnChinaDay,
 } from "../lib/attendance";
@@ -46,6 +47,19 @@ describe("工龄和年假", () => {
     ).toEqual({ workYears: 5, annualLeaveDays: 5 }));
 });
 describe("考勤规则", () => {
+  it("签到和签退时间窗各为一小时", () => {
+    const windows = attendanceWindows(
+      new Date("2026-08-08T16:00:00.000Z"),
+      "09:00",
+      "18:00",
+    );
+    expect(windows.checkInStart.toISOString()).toBe("2026-08-09T00:00:00.000Z");
+    expect(windows.checkInEnd.toISOString()).toBe("2026-08-09T01:00:00.000Z");
+    expect(windows.checkOutStart.toISOString()).toBe(
+      "2026-08-09T10:00:00.000Z",
+    );
+    expect(windows.checkOutEnd.toISOString()).toBe("2026-08-09T11:00:00.000Z");
+  });
   it("迟到且早退按旷工处理", () =>
     expect(attendanceResult(true, true)).toEqual({
       status: "ABSENT",
@@ -78,9 +92,37 @@ describe("部署配置", () => {
 });
 describe("订单业务状态", () => {
   it("审核、发票、回款阶段按业务顺序显示", () => {
-    expect(businessOrderStatus({approvalStatus:"PENDING_ADMIN",invoiceStatus:"NOT_REQUIRED",paymentStatus:"NOT_REQUIRED",status:"PENDING_ADMIN"})).toBe("合同待审批");
-    expect(businessOrderStatus({approvalStatus:"APPROVED",invoiceStatus:"PENDING",paymentStatus:"NOT_REQUIRED",status:"APPROVED"})).toBe("待开发票");
-    expect(businessOrderStatus({approvalStatus:"APPROVED",invoiceStatus:"COMPLETED",paymentStatus:"PARTIAL",status:"IN_PROGRESS"})).toBe("待收回款");
-    expect(businessOrderStatus({approvalStatus:"APPROVED",invoiceStatus:"COMPLETED",paymentStatus:"COMPLETED",status:"COMPLETED"})).toBe("已完成");
+    expect(
+      businessOrderStatus({
+        approvalStatus: "PENDING_ADMIN",
+        invoiceStatus: "NOT_REQUIRED",
+        paymentStatus: "NOT_REQUIRED",
+        status: "PENDING_ADMIN",
+      }),
+    ).toBe("合同待审批");
+    expect(
+      businessOrderStatus({
+        approvalStatus: "APPROVED",
+        invoiceStatus: "PENDING",
+        paymentStatus: "NOT_REQUIRED",
+        status: "APPROVED",
+      }),
+    ).toBe("待开发票");
+    expect(
+      businessOrderStatus({
+        approvalStatus: "APPROVED",
+        invoiceStatus: "COMPLETED",
+        paymentStatus: "PARTIAL",
+        status: "IN_PROGRESS",
+      }),
+    ).toBe("待收回款");
+    expect(
+      businessOrderStatus({
+        approvalStatus: "APPROVED",
+        invoiceStatus: "COMPLETED",
+        paymentStatus: "COMPLETED",
+        status: "COMPLETED",
+      }),
+    ).toBe("已完成");
   });
 });
