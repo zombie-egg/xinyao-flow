@@ -53,6 +53,7 @@ enum LeaveType {
 
 enum ExceptionType {
   LATE
+  EARLY_LEAVE
   ABSENT
 }
 
@@ -201,6 +202,8 @@ model Attendance {
   checkOutAccuracy  Float?
   distanceMeters    Float?
   status            AttendanceStatus
+  isLate            Boolean              @default(false)
+  isEarlyLeave      Boolean              @default(false)
   remark            String?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
