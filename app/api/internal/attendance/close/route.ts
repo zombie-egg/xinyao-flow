@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       explanationDeadline = new Date(now.getTime() - 24 * 60 * 60 * 1000),
       unexplained = await db.attendanceException.findMany({
         where: {
-          disposition: "PENDING",
+          status: { in: ["PENDING_MANAGER", "PENDING_ADMIN"] },
           reason: null,
           updatedAt: { lte: explanationDeadline },
         },
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
         const result = await tx.attendanceException.updateMany({
           where: {
             id: exception.id,
-            disposition: "PENDING",
+            status: { in: ["PENDING_MANAGER", "PENDING_ADMIN"] },
             reason: null,
           },
           data: { status: "APPROVED", disposition: "ARCHIVED" },

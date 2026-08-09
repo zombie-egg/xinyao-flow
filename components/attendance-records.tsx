@@ -47,7 +47,10 @@ export function AttendanceRecords({ items }: { items: RecordItem[] }) {
   return (
     <div className="space-y-3">
       {items.map((item) => {
-        const pending = item.disposition === "PENDING";
+        const canExplain = ["PENDING_MANAGER", "PENDING_ADMIN"].includes(
+            item.status,
+          ),
+          displayDisposition = canExplain ? "PENDING" : item.disposition;
         return (
           <Card key={item.id}>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -75,26 +78,29 @@ export function AttendanceRecords({ items }: { items: RecordItem[] }) {
               </div>
               <Badge
                 className={
-                  item.disposition === "EXEMPT"
+                  displayDisposition === "EXEMPT"
                     ? "bg-emerald-50 text-emerald-700"
                     : ""
                 }
               >
-                {dispositionText[item.disposition]}
+                {dispositionText[displayDisposition]}
               </Badge>
             </div>
             <form
               onSubmit={(e) => save(item.id, e)}
-              className="mt-4 flex flex-wrap gap-2"
+              className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
             >
               <Input
                 name="reason"
                 defaultValue={item.reason || ""}
                 placeholder="填写迟到或早退原因"
-                className="min-w-64 flex-1"
-                disabled={!pending}
+                className="min-w-0"
+                disabled={!canExplain}
               />
-              <Button disabled={saving === item.id || !pending}>
+              <Button
+                className="w-full sm:w-auto"
+                disabled={saving === item.id || !canExplain}
+              >
                 {saving === item.id
                   ? "提交中…"
                   : item.reason
