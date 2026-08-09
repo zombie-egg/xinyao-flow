@@ -1,3 +1,51 @@
-import {db} from '@/lib/db';import {requirePermission} from '@/lib/auth';import {ok,fail,apiError} from '@/lib/api';import {Prisma} from '@prisma/client';import {z} from 'zod';import {normalizeCustomerName,normalizeCustomerPhone} from '@/lib/customer';
-const schema=z.object({name:z.string().trim().min(2).max(100),contact:z.string().trim().min(2).max(50),phone:z.string().trim().min(5).max(30),address:z.string().trim().max(300).optional(),contactInfo:z.string().trim().max(300).optional(),remark:z.string().trim().max(1000).optional()});
-export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){try{const u=await requirePermission('customer:manage'),{id}=await params,p=schema.safeParse(await req.json());if(!p.success)return fail(p.error.issues[0].message,'VALIDATION_ERROR');const existing=await db.customer.findUnique({where:{id}});if(!existing)return fail('客户不存在','NOT_FOUND',404);if(u.role.code!=='ADMIN'&&existing.ownerId!==u.id)throw new Error('FORBIDDEN');const updated=await db.customer.update({where:{id},data:{...p.data,nameNormalized:normalizeCustomerName(p.data.name),phoneNormalized:normalizeCustomerPhone(p.data.phone)}});await db.operationLog.create({data:{userId:u.id,action:'UPDATE_CUSTOMER',module:'CUSTOMER',targetId:id,description:`修改客户：${updated.name}`}});return ok(updated)}catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError&&e.code==='P2002')return fail('该客户已经存在，请勿重复创建','CUSTOMER_EXISTS',409);return apiError(e)}}
+import { db } from "@/lib/db";
+import { requirePermission } from "@/lib/auth";
+import { ok, fail, apiError } from "@/lib/api";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
+import { normalizeCustomerName, normalizeCustomerPhone } from "@/lib/customer";
+const schema = z.object({
+  name: z.string().trim().min(2).max(100),
+  contact: z.string().trim().min(2).max(50),
+  phone: z.string().trim().min(5).max(30),
+  address: z.string().trim().max(300).optional(),
+  contactInfo: z.string().trim().max(300).optional(),
+  remark: z.string().trim().max(1000).optional(),
+});
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const u = await requirePermission("customer:manage"),
+      { id } = await params,
+      p = schema.safeParse(await req.json());
+    if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
+    const existing = await db.customer.findUnique({ where: { id } });
+    if (!existing) return fail("客户不存在", "NOT_FOUND", 404);
+    if (!u.role.code.startsWith("SALES") || existing.ownerId !== u.id)
+      throw new Error("FORBIDDEN");
+    const updated = await db.customer.update({
+      where: { id },
+      data: {
+        ...p.data,
+        nameNormalized: normalizeCustomerName(p.data.name),
+        phoneNormalized: normalizeCustomerPhone(p.data.phone),
+      },
+    });
+    await db.operationLog.create({
+      data: {
+        userId: u.id,
+        action: "UPDATE_CUSTOMER",
+        module: "CUSTOMER",
+        targetId: id,
+        description: `修改客户：${updated.name}`,
+      },
+    });
+    return ok(updated);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")
+      return fail("该客户已经存在，请勿重复创建", "CUSTOMER_EXISTS", 409);
+    return apiError(e);
+  }
+}
