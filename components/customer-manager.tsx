@@ -229,7 +229,7 @@ export function CustomerManager({
                 "客户流水",
                 "操作",
               ].map((x) => (
-                <th key={x} className="px-4 py-3 font-medium">
+                <th key={x} className="whitespace-nowrap px-4 py-3 font-medium">
                   {x}
                 </th>
               ))}
@@ -243,12 +243,12 @@ export function CustomerManager({
                 <td className="px-4 py-4">{c.phone}</td>
                 <td className="px-4 py-4">{c.contactInfo || "—"}</td>
                 <td className="px-4 py-4">{c.address || "—"}</td>
-                <td className="px-4 py-4">{c.owner.name}</td>
+                <td className="whitespace-nowrap px-4 py-4">{c.owner.name}</td>
                 <td className="px-4 py-4">
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-8 px-3"
+                    className="h-8 min-w-[5.5rem] px-3"
                     onClick={() => setOpenId(openId === c.id ? null : c.id)}
                   >
                     {openId === c.id ? "收起流水" : "查看流水"}
