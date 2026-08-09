@@ -1,2 +1,116 @@
-import Link from 'next/link';import {requireUser} from '@/lib/auth';import {db} from '@/lib/db';import {PageHeader,Empty} from '@/components/page';import {OrderList} from '@/components/order-list';import {SearchForm} from '@/components/search-form';
-export default async function Orders({searchParams}:{searchParams:Promise<{status?:string;q?:string}>}){const u=await requireUser(),params=await searchParams,q=params.q?.trim()||'',statusFilter=params.status==='COMPLETED'?'COMPLETED':params.status==='PROCESSING'?'PROCESSING':'ALL',baseWhere=u.role.code.startsWith('SALES')?{salesUserId:u.id}:u.role.code==='TECH_MANAGER'?{approvalStatus:'APPROVED' as const}:u.role.code==='TECH_EMPLOYEE'?{approvalStatus:'APPROVED' as const,technicalUserId:u.id}:u.role.code.startsWith('FINANCE')||u.role.code==='ADMIN'?{}:null;if(!baseWhere)throw new Error('FORBIDDEN');const statusWhere=statusFilter==='COMPLETED'?{status:'COMPLETED' as const}:statusFilter==='PROCESSING'?{status:{not:'COMPLETED' as const}}:{},searchWhere=q?{OR:[{orderNumber:{contains:q,mode:'insensitive' as const}},{name:{contains:q,mode:'insensitive' as const}},{customer:{name:{contains:q,mode:'insensitive' as const}}},{customer:{contact:{contains:q,mode:'insensitive' as const}}},{customer:{phone:{contains:q}}},{salesUser:{name:{contains:q,mode:'insensitive' as const}}}]}:{};const items=await db.order.findMany({where:{...baseWhere,...statusWhere,...searchWhere},include:{customer:true,salesUser:{select:{name:true}}},orderBy:{createdAt:'desc'},take:500});return <><PageHeader title={u.role.code.startsWith('SALES')?'我的订单':u.role.code.startsWith('TECH')?'订单查询':'订单管理'} description="点击订单号查看客户、合同、项目需求、财务信息和流程记录"/><SearchForm defaultValue={q} placeholder="搜索订单号、订单名称、客户、联系人、电话或销售人员" hidden={{status:statusFilter}} clearHref={`/orders?status=${statusFilter}`}/>{items.length?<OrderList items={items} statusFilter={statusFilter} query={q}/>:<><div className="mb-4 flex gap-2"><Link href="/orders?status=ALL" className="rounded-lg border bg-white px-3 py-2 text-sm">全部</Link><Link href="/orders?status=PROCESSING" className="rounded-lg border bg-white px-3 py-2 text-sm">处理中</Link><Link href="/orders?status=COMPLETED" className="rounded-lg border bg-white px-3 py-2 text-sm">已完成</Link></div><Empty text={q?'没有匹配的订单':'暂无订单'}/></>}</>}
+import Link from "next/link";
+import { requireUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { PageHeader, Empty } from "@/components/page";
+import { OrderList } from "@/components/order-list";
+import { SearchForm } from "@/components/search-form";
+export default async function Orders({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; q?: string }>;
+}) {
+  const u = await requireUser(),
+    params = await searchParams,
+    q = params.q?.trim() || "",
+    statusFilter =
+      params.status === "COMPLETED"
+        ? "COMPLETED"
+        : params.status === "PROCESSING"
+          ? "PROCESSING"
+          : "ALL",
+    baseWhere = u.role.code === "SALES_MANAGER"
+      ? { salesUser: { departmentId: u.departmentId } }
+      : u.role.code === "SALES_EMPLOYEE"
+        ? { salesUserId: u.id }
+      : u.role.code === "TECH_MANAGER"
+        ? { approvalStatus: "APPROVED" as const }
+        : u.role.code === "TECH_EMPLOYEE"
+          ? { approvalStatus: "APPROVED" as const, technicalUserId: u.id }
+          : u.role.code.startsWith("FINANCE") || u.role.code === "ADMIN"
+            ? {}
+            : null;
+  if (!baseWhere) throw new Error("FORBIDDEN");
+  const statusWhere =
+      statusFilter === "COMPLETED"
+        ? { status: "COMPLETED" as const }
+        : statusFilter === "PROCESSING"
+          ? { status: { not: "COMPLETED" as const } }
+          : {},
+    searchWhere = q
+      ? {
+          OR: [
+            { orderNumber: { contains: q, mode: "insensitive" as const } },
+            { name: { contains: q, mode: "insensitive" as const } },
+            {
+              customer: { name: { contains: q, mode: "insensitive" as const } },
+            },
+            {
+              customer: {
+                contact: { contains: q, mode: "insensitive" as const },
+              },
+            },
+            { customer: { phone: { contains: q } } },
+            {
+              salesUser: {
+                name: { contains: q, mode: "insensitive" as const },
+              },
+            },
+          ],
+        }
+      : {};
+  const items = await db.order.findMany({
+    where: { ...baseWhere, ...statusWhere, ...searchWhere },
+    include: { customer: true, salesUser: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
+  return (
+    <>
+      <PageHeader
+        title={
+          u.role.code === "SALES_EMPLOYEE"
+            ? "我的订单"
+            : u.role.code === "SALES_MANAGER"
+              ? "订单管理"
+            : u.role.code.startsWith("TECH")
+              ? "订单查询"
+              : "订单管理"
+        }
+        description="点击订单号查看客户、合同、项目需求、财务信息和流程记录"
+      />
+      <SearchForm
+        defaultValue={q}
+        placeholder="搜索订单号、订单名称、客户、联系人、电话或销售人员"
+        hidden={{ status: statusFilter }}
+        clearHref={`/orders?status=${statusFilter}`}
+      />
+      {items.length ? (
+        <OrderList items={items} statusFilter={statusFilter} query={q} />
+      ) : (
+        <>
+          <div className="mb-4 flex gap-2">
+            <Link
+              href="/orders?status=ALL"
+              className="rounded-lg border bg-white px-3 py-2 text-sm"
+            >
+              全部
+            </Link>
+            <Link
+              href="/orders?status=PROCESSING"
+              className="rounded-lg border bg-white px-3 py-2 text-sm"
+            >
+              处理中
+            </Link>
+            <Link
+              href="/orders?status=COMPLETED"
+              className="rounded-lg border bg-white px-3 py-2 text-sm"
+            >
+              已完成
+            </Link>
+          </div>
+          <Empty text={q ? "没有匹配的订单" : "暂无订单"} />
+        </>
+      )}
+    </>
+  );
+}

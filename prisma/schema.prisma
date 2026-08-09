@@ -160,38 +160,39 @@ model RolePermission {
 }
 
 model User {
-  id                  String             @id @default(cuid())
-  name                String
-  username            String             @unique
-  email               String?            @unique
-  emailVerifiedAt     DateTime?
-  passwordHash        String
-  phone               String?
-  avatarUrl           String?
-  departmentId        String?
-  roleId              String
-  jobTitle            String
-  employmentStartDate DateTime
-  workYears           Int                @default(0)
-  annualLeaveDays     Decimal            @default(0) @db.Decimal(5, 1)
-  annualLeaveUsed     Decimal            @default(0) @db.Decimal(5, 1)
-  status              UserStatus         @default(ACTIVE)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  department          Department?        @relation(fields: [departmentId], references: [id])
-  role                Role               @relation(fields: [roleId], references: [id])
-  attendances         Attendance[]
-  leaveRequests       LeaveRequest[]
-  leaveApprovals      LeaveApproval[]
-  customers           Customer[]
-  contracts           Contract[]
-  salesOrders         Order[]            @relation("SalesOrders")
-  financeOrders       Order[]            @relation("FinanceOrders")
-  technicalOrders     Order[]            @relation("TechnicalOrders")
-  orderApprovals      ContractApproval[]
-  paymentsRecorded    Payment[]          @relation("RecordedPayments")
-  logs                OperationLog[]
-  notifications       Notification[]
+  id                              String                       @id @default(cuid())
+  name                            String
+  username                        String                       @unique
+  email                           String?                      @unique
+  emailVerifiedAt                 DateTime?
+  passwordHash                    String
+  phone                           String?
+  avatarUrl                       String?
+  departmentId                    String?
+  roleId                          String
+  jobTitle                        String
+  employmentStartDate             DateTime
+  workYears                       Int                          @default(0)
+  annualLeaveDays                 Decimal                      @default(0) @db.Decimal(5, 1)
+  annualLeaveUsed                 Decimal                      @default(0) @db.Decimal(5, 1)
+  status                          UserStatus                   @default(ACTIVE)
+  createdAt                       DateTime                     @default(now())
+  updatedAt                       DateTime                     @updatedAt
+  department                      Department?                  @relation(fields: [departmentId], references: [id])
+  role                            Role                         @relation(fields: [roleId], references: [id])
+  attendances                     Attendance[]
+  leaveRequests                   LeaveRequest[]
+  leaveApprovals                  LeaveApproval[]
+  customers                       Customer[]
+  customerActivities              CustomerActivity[]
+  contracts                       Contract[]
+  salesOrders                     Order[]                      @relation("SalesOrders")
+  financeOrders                   Order[]                      @relation("FinanceOrders")
+  technicalOrders                 Order[]                      @relation("TechnicalOrders")
+  orderApprovals                  ContractApproval[]
+  paymentsRecorded                Payment[]                    @relation("RecordedPayments")
+  logs                            OperationLog[]
+  notifications                   Notification[]
   attendanceRequirementsPublished DailyAttendanceRequirement[]
 }
 
@@ -223,30 +224,30 @@ model Attendance {
 }
 
 model AttendanceException {
-  id                String          @id @default(cuid())
-  attendanceId      String          @unique
+  id                String                @id @default(cuid())
+  attendanceId      String                @unique
   type              ExceptionType
   reason            String?
-  status            ApprovalStatus  @default(PENDING_MANAGER)
+  status            ApprovalStatus        @default(PENDING_MANAGER)
   disposition       AttendanceDisposition @default(PENDING)
   currentApproverId String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  attendance        Attendance      @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  attendance        Attendance            @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
   approvals         LeaveApproval[]
 }
 
 model DailyAttendanceRequirement {
-  id                    String    @id @default(cuid())
-  date                  DateTime  @unique
-  requireCheckIn        Boolean   @default(false)
-  requireCheckOut       Boolean   @default(false)
-  checkInPublishedAt    DateTime?
-  checkOutPublishedAt   DateTime?
-  publishedById         String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  publisher             User?     @relation(fields: [publishedById], references: [id], onDelete: SetNull)
+  id                  String    @id @default(cuid())
+  date                DateTime  @unique
+  requireCheckIn      Boolean   @default(false)
+  requireCheckOut     Boolean   @default(false)
+  checkInPublishedAt  DateTime?
+  checkOutPublishedAt DateTime?
+  publishedById       String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  publisher           User?     @relation(fields: [publishedById], references: [id], onDelete: SetNull)
 }
 
 model LeaveRequest {
@@ -295,24 +296,37 @@ model AnnualLeaveRule {
 }
 
 model Customer {
-  id              String     @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
-  nameNormalized  String     @default("")
+  nameNormalized  String             @default("")
   contact         String
   phone           String
-  phoneNormalized String     @default("")
+  phoneNormalized String             @default("")
   address         String?
   contactInfo     String?
   remark          String?
   ownerId         String
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  owner           User       @relation(fields: [ownerId], references: [id])
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  owner           User               @relation(fields: [ownerId], references: [id])
   contracts       Contract[]
   orders          Order[]
+  activities      CustomerActivity[]
 
-  @@index([ownerId, name])
   @@unique([nameNormalized, phoneNormalized])
+  @@index([ownerId, name])
+}
+
+model CustomerActivity {
+  id         String   @id @default(cuid())
+  customerId String
+  authorId   String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, createdAt])
 }
 
 model Contract {
