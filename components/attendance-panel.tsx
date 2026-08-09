@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { LocationMap } from "./location-map";
@@ -23,6 +23,10 @@ export function AttendancePanel({
   company,
   requireCheckIn,
   requireCheckOut,
+  checkInPublishedAt,
+  checkOutPublishedAt,
+  checkInDurationMinutes,
+  checkOutDurationMinutes,
   initialCheckedIn,
   initialCheckedOut,
 }: {
@@ -32,6 +36,10 @@ export function AttendancePanel({
   company: { latitude: number; longitude: number };
   requireCheckIn: boolean;
   requireCheckOut: boolean;
+  checkInPublishedAt: string | null;
+  checkOutPublishedAt: string | null;
+  checkInDurationMinutes: number;
+  checkOutDurationMinutes: number;
   initialCheckedIn: boolean;
   initialCheckedOut: boolean;
 }) {
@@ -43,7 +51,34 @@ export function AttendancePanel({
     [loading, setLoading] = useState<string | null>(null),
     [position, setPosition] = useState<Point | null>(null),
     [checkedIn, setCheckedIn] = useState(initialCheckedIn),
-    [checkedOut, setCheckedOut] = useState(initialCheckedOut);
+    [checkedOut, setCheckedOut] = useState(initialCheckedOut),
+    [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const checkInDeadline = checkInPublishedAt
+      ? new Date(checkInPublishedAt).getTime() + checkInDurationMinutes * 60000
+      : null,
+    checkOutDeadline = checkOutPublishedAt
+      ? new Date(checkOutPublishedAt).getTime() +
+        checkOutDurationMinutes * 60000
+      : null,
+    checkInExpired = Boolean(
+      requireCheckIn && !checkedIn && checkInDeadline && now > checkInDeadline,
+    ),
+    checkOutExpired = Boolean(
+      requireCheckOut &&
+        !checkedOut &&
+        checkOutDeadline &&
+        now > checkOutDeadline,
+    );
+  useEffect(() => {
+    if (checkInExpired && checkOutExpired)
+      setMessage("签到、签退时间已结束：未签到、未签退");
+    else if (checkInExpired) setMessage("签到时间已结束：未签到");
+    else if (checkOutExpired) setMessage("签退时间已结束：未签退");
+  }, [checkInExpired, checkOutExpired]);
   const distance = useMemo(
     () => (position ? Math.round(haversineMeters(position, company)) : null),
     [position, company],
@@ -99,7 +134,26 @@ export function AttendancePanel({
       position && distance !== null && distance > radius,
     ),
     allDone =
-      (!requireCheckIn || checkedIn) && (!requireCheckOut || checkedOut);
+      (!requireCheckIn || checkedIn || checkInExpired) &&
+      (!requireCheckOut || checkedOut || checkOutExpired),
+    hasActionableTask =
+      (requireCheckIn && !checkedIn && !checkInExpired) ||
+      (requireCheckOut && !checkedOut && !checkOutExpired);
+  function taskLabel(
+    required: boolean,
+    completed: boolean,
+    expired: boolean,
+    deadline: number | null,
+    type: "签到" | "签退",
+  ) {
+    if (!required) return `今日无需${type}`;
+    if (completed) return `今日已${type}`;
+    if (expired) return `未${type}`;
+    const minutes = deadline
+      ? Math.max(1, Math.ceil((deadline - now) / 60000))
+      : 0;
+    return `${type}剩余 ${minutes} 分钟`;
+  }
   return (
     <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[1.3fr_.7fr]">
       <Card className="overflow-hidden p-2">
@@ -117,18 +171,30 @@ export function AttendancePanel({
           {workStart} — {workEnd}
         </p>
         <p className="mt-2 text-xs leading-5 text-zinc-500">
-          签到：上班前 1 小时至上班时间 · 签退：下班时间至下班后 1 小时
+          管理员发布后开始计时，请在系统设定的有效时间内完成考勤
         </p>
         <div className="mt-4 flex justify-center gap-2 text-xs">
           <span
-            className={`rounded-full px-3 py-1 ${requireCheckIn ? "bg-amber-50 text-amber-700" : "bg-zinc-100 text-zinc-500"}`}
+            className={`rounded-full px-3 py-1 ${checkInExpired ? "bg-red-50 text-red-700" : requireCheckIn ? "bg-amber-50 text-amber-700" : "bg-zinc-100 text-zinc-500"}`}
           >
-            {requireCheckIn ? "今日需要签到" : "今日无需签到"}
+            {taskLabel(
+              requireCheckIn,
+              checkedIn,
+              checkInExpired,
+              checkInDeadline,
+              "签到",
+            )}
           </span>
           <span
-            className={`rounded-full px-3 py-1 ${requireCheckOut ? "bg-amber-50 text-amber-700" : "bg-zinc-100 text-zinc-500"}`}
+            className={`rounded-full px-3 py-1 ${checkOutExpired ? "bg-red-50 text-red-700" : requireCheckOut ? "bg-amber-50 text-amber-700" : "bg-zinc-100 text-zinc-500"}`}
           >
-            {requireCheckOut ? "今日需要签退" : "今日无需签退"}
+            {taskLabel(
+              requireCheckOut,
+              checkedOut,
+              checkOutExpired,
+              checkOutDeadline,
+              "签退",
+            )}
           </span>
         </div>
         {distance !== null && (
@@ -139,7 +205,7 @@ export function AttendancePanel({
           </div>
         )}
         <div className="mt-7 space-y-3">
-          {!position && (requireCheckIn || requireCheckOut) && (
+          {!position && hasActionableTask && (
             <Button
               type="button"
               onClick={locate}
@@ -159,15 +225,20 @@ export function AttendancePanel({
               )}
             </Button>
           )}
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {requireCheckIn && (
               <Button
                 type="button"
                 onClick={() => submit("check-in")}
-                disabled={loading !== null || checkedIn || outOfRange}
+                disabled={
+                  loading !== null || checkedIn || checkInExpired || outOfRange
+                }
                 variant={checkedIn ? "outline" : "default"}
+                className="w-full max-w-72"
               >
-                {checkedIn ? (
+                {checkInExpired ? (
+                  <>未签到</>
+                ) : checkedIn ? (
                   <>
                     <ShieldCheck className="mr-2" size={17} />
                     已签到
@@ -184,10 +255,18 @@ export function AttendancePanel({
               <Button
                 type="button"
                 onClick={() => submit("check-out")}
-                disabled={loading !== null || checkedOut || outOfRange}
+                disabled={
+                  loading !== null ||
+                  checkedOut ||
+                  checkOutExpired ||
+                  outOfRange
+                }
                 variant={checkedOut ? "outline" : "default"}
+                className="w-full max-w-72"
               >
-                {checkedOut ? (
+                {checkOutExpired ? (
+                  <>未签退</>
+                ) : checkedOut ? (
                   <>
                     <ShieldCheck className="mr-2" size={17} />
                     已签退

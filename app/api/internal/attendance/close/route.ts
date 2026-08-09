@@ -3,8 +3,8 @@ import { ok, fail, apiError } from "@/lib/api";
 import { startOfChinaDay } from "@/lib/utils";
 import {
   attendanceDirectAdmin,
-  attendanceWindows,
   attendanceResult,
+  publishedAttendanceDeadline,
 } from "@/lib/attendance";
 export async function POST(req: Request) {
   try {
@@ -25,13 +25,20 @@ export async function POST(req: Request) {
         db.dailyAttendanceRequirement.findUnique({ where: { date } }),
       ]);
     if (!setting) return fail("考勤设置不存在", "ATTENDANCE_NOT_CONFIGURED");
-    const { checkInEnd, checkOutEnd } = attendanceWindows(
-        date,
-        setting.workStart,
-        setting.workEnd,
-      ),
-      afterCheckInWindow = now >= checkInEnd,
-      afterCheckOutWindow = now >= checkOutEnd,
+    const checkInEnd = requirement?.checkInPublishedAt
+        ? publishedAttendanceDeadline(
+            requirement.checkInPublishedAt,
+            requirement.checkInDurationMinutes,
+          )
+        : null,
+      checkOutEnd = requirement?.checkOutPublishedAt
+        ? publishedAttendanceDeadline(
+            requirement.checkOutPublishedAt,
+            requirement.checkOutDurationMinutes,
+          )
+        : null,
+      afterCheckInWindow = Boolean(checkInEnd && now >= checkInEnd),
+      afterCheckOutWindow = Boolean(checkOutEnd && now >= checkOutEnd),
       explanationDeadline = new Date(now.getTime() - 24 * 60 * 60 * 1000),
       unexplained = await db.attendanceException.findMany({
         where: {
@@ -135,7 +142,15 @@ export async function POST(req: Request) {
           newLate = missingCheckIn && !attendance?.isLate,
           newEarly = missingCheckOut && !attendance?.isEarlyLeave;
         if (!missingCheckIn && !missingCheckOut) {
-          if (!attendance && afterCheckOutWindow)
+          const activePublishedTask = Boolean(
+            (requirement?.requireCheckIn &&
+              !attendance?.checkInTime &&
+              !afterCheckInWindow) ||
+              (requirement?.requireCheckOut &&
+                !attendance?.checkOutTime &&
+                !afterCheckOutWindow),
+          );
+          if (!attendance && !activePublishedTask)
             await tx.attendance.create({
               data: {
                 userId: user.id,

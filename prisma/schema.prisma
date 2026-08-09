@@ -238,16 +238,18 @@ model AttendanceException {
 }
 
 model DailyAttendanceRequirement {
-  id                  String    @id @default(cuid())
-  date                DateTime  @unique
-  requireCheckIn      Boolean   @default(false)
-  requireCheckOut     Boolean   @default(false)
-  checkInPublishedAt  DateTime?
-  checkOutPublishedAt DateTime?
-  publishedById       String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  publisher           User?     @relation(fields: [publishedById], references: [id], onDelete: SetNull)
+  id                      String    @id @default(cuid())
+  date                    DateTime  @unique
+  requireCheckIn          Boolean   @default(false)
+  requireCheckOut         Boolean   @default(false)
+  checkInPublishedAt      DateTime?
+  checkOutPublishedAt     DateTime?
+  checkInDurationMinutes  Int       @default(20)
+  checkOutDurationMinutes Int       @default(20)
+  publishedById           String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  publisher               User?     @relation(fields: [publishedById], references: [id], onDelete: SetNull)
 }
 
 model LeaveRequest {
@@ -439,17 +441,18 @@ model ContractApproval {
 }
 
 model CompanySetting {
-  id               String   @id @default("company")
-  companyName      String   @default("企业业务管理系统")
-  logoUrl          String?
-  address          String?
-  latitude         Float?
-  longitude        Float?
-  attendanceRadius Int      @default(200)
-  workStart        String   @default("09:00")
-  workEnd          String   @default("18:00")
-  absenceCutoff    String   @default("12:00")
-  updatedAt        DateTime @updatedAt
+  id                      String   @id @default("company")
+  companyName             String   @default("企业业务管理系统")
+  logoUrl                 String?
+  address                 String?
+  latitude                Float?
+  longitude               Float?
+  attendanceRadius        Int      @default(200)
+  attendanceWindowMinutes Int      @default(20)
+  workStart               String   @default("09:00")
+  workEnd                 String   @default("18:00")
+  absenceCutoff           String   @default("12:00")
+  updatedAt               DateTime @updatedAt
 }
 
 model Notification {

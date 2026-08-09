@@ -1,4 +1,86 @@
-import {db} from '@/lib/db';import {requirePermission,requireUser} from '@/lib/auth';import {ok,fail,apiError} from '@/lib/api';import {z} from 'zod';import {Prisma} from '@prisma/client';import {saveUpload} from '@/lib/uploads';export const runtime='nodejs';
-const schema=z.object({companyName:z.string().trim().min(2).max(60),address:z.string().trim().min(2).max(300),latitude:z.coerce.number().min(-90).max(90),longitude:z.coerce.number().min(-180).max(180),attendanceRadius:z.coerce.number().int().min(20).max(5000),workStart:z.string().regex(/^\d{2}:\d{2}$/),workEnd:z.string().regex(/^\d{2}:\d{2}$/),absenceCutoff:z.string().regex(/^\d{2}:\d{2}$/)});const imageTypes=new Map([['image/jpeg','jpg'],['image/png','png'],['image/webp','webp']]);
-export async function GET(){try{await requireUser();return ok(await db.companySetting.findUnique({where:{id:'company'}}))}catch(e){return apiError(e)}}
-export async function PUT(req:Request){try{const u=await requirePermission('settings:manage'),contentType=req.headers.get('content-type')||'';let raw:Record<string,unknown>,logo:File|null=null;if(contentType.includes('multipart/form-data')){const form=await req.formData();raw=Object.fromEntries(form.entries());const file=form.get('logo');if(file instanceof File&&file.size>0)logo=file}else raw=await req.json();const p=schema.safeParse(raw);if(!p.success)return fail(p.error.issues[0].message,'VALIDATION_ERROR');const before=await db.companySetting.findUnique({where:{id:'company'}});let logoUrl=before?.logoUrl;if(logo){try{logoUrl=await saveUpload(logo,{prefix:'company-logo',types:imageTypes,maxBytes:3*1024*1024})}catch(e){if(e instanceof Error&&e.message==='INVALID_FILE_TYPE')return fail('企业 Logo 仅支持 JPG、PNG、WEBP','INVALID_FILE_TYPE');if(e instanceof Error&&e.message==='FILE_TOO_LARGE')return fail('企业 Logo 不能超过 3MB','FILE_TOO_LARGE');throw e}}const after=await db.companySetting.upsert({where:{id:'company'},update:{...p.data,logoUrl},create:{id:'company',...p.data,logoUrl}});await db.operationLog.create({data:{userId:u.id,action:'UPDATE_SETTINGS',module:'SETTINGS',description:'更新企业信息、Logo 与考勤地址',beforeData:before?JSON.parse(JSON.stringify(before)) as Prisma.InputJsonValue:undefined,afterData:JSON.parse(JSON.stringify(after)) as Prisma.InputJsonValue}});return ok(after)}catch(e){return apiError(e)}}
+import { db } from "@/lib/db";
+import { requirePermission, requireUser } from "@/lib/auth";
+import { ok, fail, apiError } from "@/lib/api";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import { saveUpload } from "@/lib/uploads";
+export const runtime = "nodejs";
+const schema = z.object({
+  companyName: z.string().trim().min(2).max(60),
+  address: z.string().trim().min(2).max(300),
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  attendanceRadius: z.coerce.number().int().min(20).max(5000),
+  attendanceWindowMinutes: z.coerce.number().int().min(1).max(240),
+  workStart: z.string().regex(/^\d{2}:\d{2}$/),
+  workEnd: z.string().regex(/^\d{2}:\d{2}$/),
+  absenceCutoff: z.string().regex(/^\d{2}:\d{2}$/),
+});
+const imageTypes = new Map([
+  ["image/jpeg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+]);
+export async function GET() {
+  try {
+    await requireUser();
+    return ok(await db.companySetting.findUnique({ where: { id: "company" } }));
+  } catch (e) {
+    return apiError(e);
+  }
+}
+export async function PUT(req: Request) {
+  try {
+    const u = await requirePermission("settings:manage"),
+      contentType = req.headers.get("content-type") || "";
+    let raw: Record<string, unknown>,
+      logo: File | null = null;
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      raw = Object.fromEntries(form.entries());
+      const file = form.get("logo");
+      if (file instanceof File && file.size > 0) logo = file;
+    } else raw = await req.json();
+    const p = schema.safeParse(raw);
+    if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
+    const before = await db.companySetting.findUnique({
+      where: { id: "company" },
+    });
+    let logoUrl = before?.logoUrl;
+    if (logo) {
+      try {
+        logoUrl = await saveUpload(logo, {
+          prefix: "company-logo",
+          types: imageTypes,
+          maxBytes: 3 * 1024 * 1024,
+        });
+      } catch (e) {
+        if (e instanceof Error && e.message === "INVALID_FILE_TYPE")
+          return fail("企业 Logo 仅支持 JPG、PNG、WEBP", "INVALID_FILE_TYPE");
+        if (e instanceof Error && e.message === "FILE_TOO_LARGE")
+          return fail("企业 Logo 不能超过 3MB", "FILE_TOO_LARGE");
+        throw e;
+      }
+    }
+    const after = await db.companySetting.upsert({
+      where: { id: "company" },
+      update: { ...p.data, logoUrl },
+      create: { id: "company", ...p.data, logoUrl },
+    });
+    await db.operationLog.create({
+      data: {
+        userId: u.id,
+        action: "UPDATE_SETTINGS",
+        module: "SETTINGS",
+        description: "更新企业信息、Logo 与考勤地址",
+        beforeData: before
+          ? (JSON.parse(JSON.stringify(before)) as Prisma.InputJsonValue)
+          : undefined,
+        afterData: JSON.parse(JSON.stringify(after)) as Prisma.InputJsonValue,
+      },
+    });
+    return ok(after);
+  } catch (e) {
+    return apiError(e);
+  }
+}

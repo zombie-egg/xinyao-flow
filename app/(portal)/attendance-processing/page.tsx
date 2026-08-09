@@ -72,7 +72,7 @@ export default async function AttendanceProcessing({
             disposition: { in: ["ARCHIVED" as const, "EXEMPT" as const] },
           }
         : { ...scope, ...search, approvals: { some: { approverId: u.id } } };
-  const [items, todayRequirement] = await Promise.all([
+  const [items, todayRequirement, setting] = await Promise.all([
       db.attendanceException.findMany({
         where,
         include: {
@@ -90,6 +90,9 @@ export default async function AttendanceProcessing({
             where: { date: startOfChinaDay() },
           })
         : Promise.resolve(null),
+      admin
+        ? db.companySetting.findUnique({ where: { id: "company" } })
+        : Promise.resolve(null),
     ]),
     suffix = q ? `&q=${encodeURIComponent(q)}` : "";
   return (
@@ -106,6 +109,7 @@ export default async function AttendanceProcessing({
         <DailyAttendancePublisher
           requireCheckIn={Boolean(todayRequirement?.requireCheckIn)}
           requireCheckOut={Boolean(todayRequirement?.requireCheckOut)}
+          durationMinutes={setting?.attendanceWindowMinutes || 20}
         />
       )}
       <div className="mb-5 flex gap-2">

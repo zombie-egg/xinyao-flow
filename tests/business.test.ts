@@ -5,8 +5,8 @@ import { safeUploadPath } from "../lib/uploads";
 import { currentWorkInfo, fullWorkYears } from "../lib/work-years";
 import {
   attendanceResult,
-  attendanceWindows,
   chinaAttendanceDays,
+  publishedAttendanceDeadline,
   timeOnChinaDay,
 } from "../lib/attendance";
 import { businessOrderStatus } from "../lib/order-workflow";
@@ -47,19 +47,13 @@ describe("工龄和年假", () => {
     ).toEqual({ workYears: 5, annualLeaveDays: 5 }));
 });
 describe("考勤规则", () => {
-  it("签到和签退时间窗各为一小时", () => {
-    const windows = attendanceWindows(
-      new Date("2026-08-08T16:00:00.000Z"),
-      "09:00",
-      "18:00",
-    );
-    expect(windows.checkInStart.toISOString()).toBe("2026-08-09T00:00:00.000Z");
-    expect(windows.checkInEnd.toISOString()).toBe("2026-08-09T01:00:00.000Z");
-    expect(windows.checkOutStart.toISOString()).toBe(
-      "2026-08-09T10:00:00.000Z",
-    );
-    expect(windows.checkOutEnd.toISOString()).toBe("2026-08-09T11:00:00.000Z");
-  });
+  it("考勤有效时间从管理员发布时间开始计算", () =>
+    expect(
+      publishedAttendanceDeadline(
+        new Date("2026-08-09T01:15:00.000Z"),
+        20,
+      ).toISOString(),
+    ).toBe("2026-08-09T01:35:00.000Z"));
   it("迟到且早退按旷工处理", () =>
     expect(attendanceResult(true, true)).toEqual({
       status: "ABSENT",

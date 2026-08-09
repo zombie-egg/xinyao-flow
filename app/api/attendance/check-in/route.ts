@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { haversineMeters, startOfChinaDay } from "@/lib/utils";
-import { attendanceWindows } from "@/lib/attendance";
+import { publishedAttendanceDeadline } from "@/lib/attendance";
 export async function POST(req: Request) {
   try {
     const user = await requirePermission("attendance:self"),
@@ -42,21 +42,16 @@ export async function POST(req: Request) {
         `当前距离公司 ${Math.round(distance)} 米，超出 ${setting.attendanceRadius} 米签到范围`,
         "OUT_OF_RANGE",
       );
+    if (!requirement.checkInPublishedAt)
+      return fail("签到任务发布时间无效", "INVALID_REQUIREMENT", 409);
     const now = new Date(),
-      { checkInStart, checkInEnd } = attendanceWindows(
-        date,
-        setting.workStart,
-        setting.workEnd,
-      );
-    if (now < checkInStart)
-      return fail(
-        `签到时间为 ${checkInStart.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit" })} 至 ${checkInEnd.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit" })}`,
-        "TOO_EARLY",
-        409,
+      checkInEnd = publishedAttendanceDeadline(
+        requirement.checkInPublishedAt,
+        requirement.checkInDurationMinutes,
       );
     if (now > checkInEnd)
       return fail(
-        "已错过今日签到时间，系统将记录为迟到，请在异常记录中说明原因",
+        "签到时间已结束：未签到。系统将记录为迟到，请在异常记录中说明原因",
         "CHECK_IN_WINDOW_CLOSED",
         409,
       );

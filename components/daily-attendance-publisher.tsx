@@ -7,16 +7,23 @@ import { LogIn, LogOut } from "lucide-react";
 export function DailyAttendancePublisher({
   requireCheckIn,
   requireCheckOut,
+  durationMinutes,
 }: {
   requireCheckIn: boolean;
   requireCheckOut: boolean;
+  durationMinutes: number;
 }) {
   const router = useRouter(),
     [loading, setLoading] = useState<string | null>(null),
     [message, setMessage] = useState("");
   async function publish(action: "CHECK_IN" | "CHECK_OUT") {
     const label = action === "CHECK_IN" ? "签到" : "签退";
-    if (!confirm(`确认发布今日${label}任务到所有员工？`)) return;
+    if (
+      !confirm(
+        `确认发布${label}任务？员工需在发布后 ${durationMinutes} 分钟内完成。`,
+      )
+    )
+      return;
     setLoading(action);
     const res = await fetch("/api/attendance/requirements", {
         method: "POST",
@@ -25,7 +32,11 @@ export function DailyAttendancePublisher({
       }),
       body = await res.json();
     setLoading(null);
-    setMessage(res.ok ? `今日${label}任务已发布给所有员工` : body.message);
+    setMessage(
+      res.ok
+        ? `${label}任务已发布，有效时间 ${durationMinutes} 分钟`
+        : body.message,
+    );
     if (res.ok) router.refresh();
   }
   return (
@@ -34,7 +45,8 @@ export function DailyAttendancePublisher({
         <div>
           <h2 className="font-medium">今日签到签退发布</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            未发布的项目默认正常出勤；发布后须在规定的签到或签退时间窗内完成。
+            未发布默认出勤；点击发布后立即开始计时，有效时间 {durationMinutes}{" "}
+            分钟。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

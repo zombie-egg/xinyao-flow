@@ -5,8 +5,8 @@ import { ok, fail, apiError } from "@/lib/api";
 import { haversineMeters, startOfChinaDay } from "@/lib/utils";
 import {
   attendanceDirectAdmin,
-  attendanceWindows,
   attendanceResult,
+  publishedAttendanceDeadline,
 } from "@/lib/attendance";
 export async function POST(req: Request) {
   try {
@@ -51,21 +51,16 @@ export async function POST(req: Request) {
         `当前距离公司 ${Math.round(distance)} 米，超出签退范围`,
         "OUT_OF_RANGE",
       );
+    if (!requirement.checkOutPublishedAt)
+      return fail("签退任务发布时间无效", "INVALID_REQUIREMENT", 409);
     const now = new Date(),
-      { checkOutStart, checkOutEnd } = attendanceWindows(
-        date,
-        setting.workStart,
-        setting.workEnd,
-      );
-    if (now < checkOutStart)
-      return fail(
-        `签退时间为 ${checkOutStart.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit" })} 至 ${checkOutEnd.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit" })}`,
-        "TOO_EARLY",
-        409,
+      checkOutEnd = publishedAttendanceDeadline(
+        requirement.checkOutPublishedAt,
+        requirement.checkOutDurationMinutes,
       );
     if (now > checkOutEnd)
       return fail(
-        "已错过今日签退时间，系统将记录为早退，请在异常记录中说明原因",
+        "签退时间已结束：未签退。系统将记录为早退，请在异常记录中说明原因",
         "CHECK_OUT_WINDOW_CLOSED",
         409,
       );

@@ -167,7 +167,7 @@ metadata:
   name: xinyao-attendance-close
   namespace: environment-6a6356942007fc25ea3603b2
 spec:
-  schedule: "*/30 * * * *"
+  schedule: "*/5 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3

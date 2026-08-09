@@ -81,9 +81,7 @@ export default async function Attendance({
       ],
       [
         "早退次数",
-        rows.filter(
-          (x) => !x.excludedFromStats && x.isEarlyLeave,
-        ).length,
+        rows.filter((x) => !x.excludedFromStats && x.isEarlyLeave).length,
         "EARLY_LEAVE",
       ],
     ] as const;
@@ -100,6 +98,14 @@ export default async function Attendance({
         company={{ latitude: setting.latitude, longitude: setting.longitude }}
         requireCheckIn={Boolean(requirement?.requireCheckIn)}
         requireCheckOut={Boolean(requirement?.requireCheckOut)}
+        checkInPublishedAt={
+          requirement?.checkInPublishedAt?.toISOString() || null
+        }
+        checkOutPublishedAt={
+          requirement?.checkOutPublishedAt?.toISOString() || null
+        }
+        checkInDurationMinutes={requirement?.checkInDurationMinutes || 20}
+        checkOutDurationMinutes={requirement?.checkOutDurationMinutes || 20}
         initialCheckedIn={Boolean(current?.checkInTime)}
         initialCheckedOut={Boolean(current?.checkOutTime)}
       />

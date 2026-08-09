@@ -1,2 +1,179 @@
-'use client';import Image from 'next/image';import {Button} from './ui/button';import {Input} from './ui/input';import {Card} from './ui/card';import {useState} from 'react';import {Building2,Camera,LocateFixed} from 'lucide-react';import {getBrowserLocation,locationErrorMessage} from '@/lib/browser-location';import {AMapAddressPicker} from './amap-address-picker';import {useRouter} from 'next/navigation';
-export function SettingsForm({setting}:{setting:Record<string,unknown>}){const router=useRouter(),[msg,setMsg]=useState(''),[companyName,setCompanyName]=useState(String(setting.companyName??'')),[address,setAddress]=useState(String(setting.address??'')),[latitude,setLatitude]=useState(String(setting.latitude??'')),[longitude,setLongitude]=useState(String(setting.longitude??'')),[logoPreview,setLogoPreview]=useState(setting.logoUrl?String(setting.logoUrl):null),[locating,setLocating]=useState(false),[saving,setSaving]=useState(false);async function useCurrentLocation(){setLocating(true);setMsg('正在读取设备真实位置…');try{const p=await getBrowserLocation(setMsg);setLatitude(String(p.latitude));setLongitude(String(p.longitude));setMsg(`已读取当前位置，精度约 ±${Math.round(p.accuracy)} 米；可修改公司地址文字后保存`)}catch(e){setMsg(locationErrorMessage(e))}finally{setLocating(false)}}async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!latitude||!longitude){setMsg('请先通过高德搜索选择公司地址');return}setSaving(true);const res=await fetch('/api/settings',{method:'PUT',body:new FormData(e.currentTarget)}),body=await res.json();setSaving(false);setMsg(res.ok?'企业信息、Logo 和考勤地址已保存':body.message);if(res.ok){setLogoPreview(body.data.logoUrl);router.refresh()}}return <form onSubmit={submit} className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]"><Card><h2 className="mb-5 flex items-center gap-2 font-medium"><Building2 size={19}/>企业信息</h2><div className="mb-6 flex items-center gap-4"><label className="group relative grid size-20 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-2xl bg-zinc-950 text-2xl font-semibold text-white">{logoPreview?<Image src={logoPreview} alt="企业 Logo" fill unoptimized className="object-cover"/>:'企'}<span className="absolute inset-0 grid place-items-center bg-black/0 text-transparent transition group-hover:bg-black/50 group-hover:text-white"><Camera size={20}/></span><input name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file)setLogoPreview(URL.createObjectURL(file))}}/></label><div><p className="text-sm font-medium">企业 Logo</p><p className="mt-1 text-xs text-zinc-500">点击图片上传，支持 JPG、PNG、WEBP，最大 3MB。</p></div></div><label className="text-sm">企业名称<Input name="companyName" value={companyName} onChange={e=>setCompanyName(e.target.value)} className="mt-2" required/></label><label className="mt-4 block text-sm">公司地址<Input name="address" value={address} onChange={e=>setAddress(e.target.value)} className="mt-2" required/></label><input name="latitude" type="hidden" value={latitude}/><input name="longitude" type="hidden" value={longitude}/><Button type="button" variant="outline" onClick={useCurrentLocation} disabled={locating} className="mt-3"><LocateFixed className="mr-2" size={17}/>{locating?'正在读取…':'使用当前位置作为考勤点'}</Button><div className="mt-6 grid gap-4 sm:grid-cols-2">{[['attendanceRadius','签到半径（米）','number'],['workStart','上班时间','time'],['workEnd','下班时间','time'],['absenceCutoff','旷工判定时间','time']].map(([name,label,type])=><label key={name} className="text-sm">{label}<Input name={name} type={type} defaultValue={String(setting[name]??'')} className="mt-2" required/></label>)}</div><div className="mt-6"><Button disabled={saving}>{saving?'保存中…':'保存全部设置'}</Button>{msg&&<p className="mt-3 text-sm text-zinc-500">{msg}</p>}</div></Card><Card><h2 className="mb-5 font-medium">高德地图选择公司地址</h2><AMapAddressPicker initialAddress={address} onSelect={value=>{setAddress(value.address);setLatitude(String(value.latitude));setLongitude(String(value.longitude));setMsg('已选择公司地址，请保存设置')}}/></Card></form>}
+"use client";
+import Image from "next/image";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Card } from "./ui/card";
+import { useState } from "react";
+import { Building2, Camera, LocateFixed } from "lucide-react";
+import {
+  getBrowserLocation,
+  locationErrorMessage,
+} from "@/lib/browser-location";
+import { AMapAddressPicker } from "./amap-address-picker";
+import { useRouter } from "next/navigation";
+export function SettingsForm({
+  setting,
+}: {
+  setting: Record<string, unknown>;
+}) {
+  const router = useRouter(),
+    [msg, setMsg] = useState(""),
+    [companyName, setCompanyName] = useState(String(setting.companyName ?? "")),
+    [address, setAddress] = useState(String(setting.address ?? "")),
+    [latitude, setLatitude] = useState(String(setting.latitude ?? "")),
+    [longitude, setLongitude] = useState(String(setting.longitude ?? "")),
+    [logoPreview, setLogoPreview] = useState(
+      setting.logoUrl ? String(setting.logoUrl) : null,
+    ),
+    [locating, setLocating] = useState(false),
+    [saving, setSaving] = useState(false);
+  async function useCurrentLocation() {
+    setLocating(true);
+    setMsg("正在读取设备真实位置…");
+    try {
+      const p = await getBrowserLocation(setMsg);
+      setLatitude(String(p.latitude));
+      setLongitude(String(p.longitude));
+      setMsg(
+        `已读取当前位置，精度约 ±${Math.round(p.accuracy)} 米；可修改公司地址文字后保存`,
+      );
+    } catch (e) {
+      setMsg(locationErrorMessage(e));
+    } finally {
+      setLocating(false);
+    }
+  }
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!latitude || !longitude) {
+      setMsg("请先通过高德搜索选择公司地址");
+      return;
+    }
+    setSaving(true);
+    const res = await fetch("/api/settings", {
+        method: "PUT",
+        body: new FormData(e.currentTarget),
+      }),
+      body = await res.json();
+    setSaving(false);
+    setMsg(res.ok ? "企业信息、Logo 和考勤地址已保存" : body.message);
+    if (res.ok) {
+      setLogoPreview(body.data.logoUrl);
+      router.refresh();
+    }
+  }
+  return (
+    <form onSubmit={submit} className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
+      <Card>
+        <h2 className="mb-5 flex items-center gap-2 font-medium">
+          <Building2 size={19} />
+          企业信息
+        </h2>
+        <div className="mb-6 flex items-center gap-4">
+          <label className="group relative grid size-20 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-2xl bg-zinc-950 text-2xl font-semibold text-white">
+            {logoPreview ? (
+              <Image
+                src={logoPreview}
+                alt="企业 Logo"
+                fill
+                unoptimized
+                className="object-cover"
+              />
+            ) : (
+              "企"
+            )}
+            <span className="absolute inset-0 grid place-items-center bg-black/0 text-transparent transition group-hover:bg-black/50 group-hover:text-white">
+              <Camera size={20} />
+            </span>
+            <input
+              name="logo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setLogoPreview(URL.createObjectURL(file));
+              }}
+            />
+          </label>
+          <div>
+            <p className="text-sm font-medium">企业 Logo</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              点击图片上传，支持 JPG、PNG、WEBP，最大 3MB。
+            </p>
+          </div>
+        </div>
+        <label className="text-sm">
+          企业名称
+          <Input
+            name="companyName"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            className="mt-2"
+            required
+          />
+        </label>
+        <label className="mt-4 block text-sm">
+          公司地址
+          <Input
+            name="address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="mt-2"
+            required
+          />
+        </label>
+        <input name="latitude" type="hidden" value={latitude} />
+        <input name="longitude" type="hidden" value={longitude} />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={useCurrentLocation}
+          disabled={locating}
+          className="mt-3"
+        >
+          <LocateFixed className="mr-2" size={17} />
+          {locating ? "正在读取…" : "使用当前位置作为考勤点"}
+        </Button>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {[
+            ["attendanceRadius", "签到半径（米）", "number"],
+            ["attendanceWindowMinutes", "考勤有效时间（分钟）", "number"],
+            ["workStart", "上班时间", "time"],
+            ["workEnd", "下班时间", "time"],
+            ["absenceCutoff", "旷工判定时间", "time"],
+          ].map(([name, label, type]) => (
+            <label key={name} className="text-sm">
+              {label}
+              <Input
+                name={name}
+                type={type}
+                defaultValue={String(setting[name] ?? "")}
+                className="mt-2"
+                required
+              />
+            </label>
+          ))}
+        </div>
+        <div className="mt-6">
+          <Button disabled={saving}>
+            {saving ? "保存中…" : "保存全部设置"}
+          </Button>
+          {msg && <p className="mt-3 text-sm text-zinc-500">{msg}</p>}
+        </div>
+      </Card>
+      <Card>
+        <h2 className="mb-5 font-medium">高德地图选择公司地址</h2>
+        <AMapAddressPicker
+          initialAddress={address}
+          onSelect={(value) => {
+            setAddress(value.address);
+            setLatitude(String(value.latitude));
+            setLongitude(String(value.longitude));
+            setMsg("已选择公司地址，请保存设置");
+          }}
+        />
+      </Card>
+    </form>
+  );
+}

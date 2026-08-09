@@ -4,19 +4,11 @@ export function timeOnChinaDay(day: Date, time: string) {
   const [hours, minutes] = time.split(":").map(Number);
   return new Date(day.getTime() + (hours * 60 + minutes) * 60000);
 }
-export function attendanceWindows(
-  day: Date,
-  workStart: string,
-  workEnd: string,
+export function publishedAttendanceDeadline(
+  publishedAt: Date,
+  durationMinutes: number,
 ) {
-  const checkInEnd = timeOnChinaDay(day, workStart),
-    checkOutStart = timeOnChinaDay(day, workEnd);
-  return {
-    checkInStart: new Date(checkInEnd.getTime() - 60 * 60 * 1000),
-    checkInEnd,
-    checkOutStart,
-    checkOutEnd: new Date(checkOutStart.getTime() + 60 * 60 * 1000),
-  };
+  return new Date(publishedAt.getTime() + durationMinutes * 60 * 1000);
 }
 export function attendanceResult(
   isLate: boolean,
