@@ -187,4 +187,7 @@ spec:
                       key: CRON_SECRET
               command: [sh, -c]
               args:
-                - curl --fail --silent --show-error --request POST --header "Authorization: Bearer $CRON_SECRET" http://service-6a774c58ec01e16bfb329d0e:8080/api/internal/attendance/close
+                - >-
+                  curl --fail --silent --show-error --request POST
+                  --header "Authorization: Bearer $CRON_SECRET"
+                  http://service-6a774c58ec01e16bfb329d0e:8080/api/internal/attendance/close
