@@ -192,6 +192,7 @@ model User {
   paymentsRecorded    Payment[]          @relation("RecordedPayments")
   logs                OperationLog[]
   notifications       Notification[]
+  attendanceRequirementsPublished DailyAttendanceRequirement[]
 }
 
 model Attendance {
@@ -233,6 +234,19 @@ model AttendanceException {
   updatedAt         DateTime        @updatedAt
   attendance        Attendance      @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
   approvals         LeaveApproval[]
+}
+
+model DailyAttendanceRequirement {
+  id                    String    @id @default(cuid())
+  date                  DateTime  @unique
+  requireCheckIn        Boolean   @default(false)
+  requireCheckOut       Boolean   @default(false)
+  checkInPublishedAt    DateTime?
+  checkOutPublishedAt   DateTime?
+  publishedById         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  publisher             User?     @relation(fields: [publishedById], references: [id], onDelete: SetNull)
 }
 
 model LeaveRequest {

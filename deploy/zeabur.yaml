@@ -160,3 +160,31 @@ spec:
     - name: web
       port: 8080
       targetPort: 8080
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: xinyao-attendance-close
+  namespace: environment-6a6356942007fc25ea3603b2
+spec:
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: close-attendance
+              image: curlimages/curl:8.15.0
+              env:
+                - name: CRON_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: xinyao-secrets
+                      key: CRON_SECRET
+              command: [sh, -c]
+              args:
+                - curl --fail --silent --show-error --request POST --header "Authorization: Bearer $CRON_SECRET" http://service-6a774c58ec01e16bfb329d0e:8080/api/internal/attendance/close
