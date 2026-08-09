@@ -57,6 +57,12 @@ enum ExceptionType {
   ABSENT
 }
 
+enum AttendanceDisposition {
+  PENDING
+  ARCHIVED
+  EXEMPT
+}
+
 enum ContractStatus {
   DRAFT
   SUBMITTED
@@ -204,6 +210,7 @@ model Attendance {
   status            AttendanceStatus
   isLate            Boolean              @default(false)
   isEarlyLeave      Boolean              @default(false)
+  excludedFromStats Boolean              @default(false)
   remark            String?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
@@ -220,6 +227,7 @@ model AttendanceException {
   type              ExceptionType
   reason            String?
   status            ApprovalStatus  @default(PENDING_MANAGER)
+  disposition       AttendanceDisposition @default(PENDING)
   currentApproverId String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
