@@ -3,7 +3,11 @@ import { requirePermission } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { normalizeCustomerName, normalizeCustomerPhone } from "@/lib/customer";
+import {
+  normalizeCustomerContact,
+  normalizeCustomerName,
+  normalizeCustomerPhone,
+} from "@/lib/customer";
 const schema = z.object({
   name: z.string().trim().min(2).max(100),
   contact: z.string().trim().min(2).max(50),
@@ -25,13 +29,27 @@ export async function PATCH(
     if (!existing) return fail("客户不存在", "NOT_FOUND", 404);
     if (!u.role.code.startsWith("SALES") || existing.ownerId !== u.id)
       throw new Error("FORBIDDEN");
-    const updated = await db.customer.update({
-      where: { id },
-      data: {
-        ...p.data,
-        nameNormalized: normalizeCustomerName(p.data.name),
-        phoneNormalized: normalizeCustomerPhone(p.data.phone),
-      },
+    const nameNormalized = normalizeCustomerName(p.data.name),
+      contactNormalized = normalizeCustomerContact(p.data.contact);
+    const updated = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('customer-create'))`;
+      const duplicate = await tx.customer.findFirst({
+        where: {
+          id: { not: id },
+          OR: [{ nameNormalized }, { contactNormalized }],
+        },
+        select: { id: true },
+      });
+      if (duplicate) throw new Error("CUSTOMER_EXISTS");
+      return tx.customer.update({
+        where: { id },
+        data: {
+          ...p.data,
+          nameNormalized,
+          contactNormalized,
+          phoneNormalized: normalizeCustomerPhone(p.data.phone),
+        },
+      });
     });
     await db.operationLog.create({
       data: {
@@ -44,6 +62,8 @@ export async function PATCH(
     });
     return ok(updated);
   } catch (e) {
+    if (e instanceof Error && e.message === "CUSTOMER_EXISTS")
+      return fail("已有客户：客户名称或联系人已存在", "CUSTOMER_EXISTS", 409);
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")
       return fail("该客户已经存在，请勿重复创建", "CUSTOMER_EXISTS", 409);
     return apiError(e);

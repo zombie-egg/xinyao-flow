@@ -9,6 +9,7 @@ type Item = {
   amount: unknown;
   approvalStatus: string;
   invoiceStatus: string;
+  invoiceApplicationStatus: string;
   paymentStatus: string;
   status: string;
   createdAt: Date;

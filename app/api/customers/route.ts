@@ -3,7 +3,11 @@ import { db } from "@/lib/db";
 import { ok, fail, apiError } from "@/lib/api";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { normalizeCustomerName, normalizeCustomerPhone } from "@/lib/customer";
+import {
+  normalizeCustomerContact,
+  normalizeCustomerName,
+  normalizeCustomerPhone,
+} from "@/lib/customer";
 const schema = z.object({
   name: z.string().trim().min(2).max(100),
   contact: z.string().trim().min(2).max(50),
@@ -60,13 +64,24 @@ export async function POST(req: Request) {
       },
     });
     if (!sales) return fail("负责销售不存在或已停用", "INVALID_SALES_USER");
-    const c = await db.customer.create({
-      data: {
-        ...data,
-        nameNormalized: normalizeCustomerName(data.name),
-        phoneNormalized: normalizeCustomerPhone(data.phone),
-        ownerId,
-      },
+    const nameNormalized = normalizeCustomerName(data.name),
+      contactNormalized = normalizeCustomerContact(data.contact);
+    const c = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('customer-create'))`;
+      const duplicate = await tx.customer.findFirst({
+        where: { OR: [{ nameNormalized }, { contactNormalized }] },
+        select: { name: true, contact: true },
+      });
+      if (duplicate) throw new Error("CUSTOMER_EXISTS");
+      return tx.customer.create({
+        data: {
+          ...data,
+          nameNormalized,
+          contactNormalized,
+          phoneNormalized: normalizeCustomerPhone(data.phone),
+          ownerId,
+        },
+      });
     });
     await db.operationLog.create({
       data: {
@@ -79,6 +94,8 @@ export async function POST(req: Request) {
     });
     return ok(c, 201);
   } catch (e) {
+    if (e instanceof Error && e.message === "CUSTOMER_EXISTS")
+      return fail("已有客户：客户名称或联系人已存在", "CUSTOMER_EXISTS", 409);
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")
       return fail("该客户已经存在，请勿重复创建", "CUSTOMER_EXISTS", 409);
     return apiError(e);

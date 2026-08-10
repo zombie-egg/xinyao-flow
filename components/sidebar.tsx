@@ -22,7 +22,7 @@ import {
   Trophy,
   Archive,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 const menus = {
   ADMIN: [
@@ -112,6 +112,7 @@ const menus = {
 export function Sidebar({
   user,
   company,
+  badges,
 }: {
   user: {
     name: string;
@@ -121,11 +122,24 @@ export function Sidebar({
     role: string;
   };
   company: { name: string; logoUrl: string | null };
+  badges: Record<string, number>;
 }) {
   const path = usePathname(),
     router = useRouter(),
     [open, setOpen] = useState(false),
+    [todoBadges, setTodoBadges] = useState(badges),
     items = menus[user.role as keyof typeof menus] || menus.ADMIN;
+  useEffect(() => {
+    const update = async () => {
+      const res = await fetch("/api/todos");
+      if (res.ok) {
+        const body = await res.json();
+        setTodoBadges(body.data);
+      }
+    };
+    const timer = window.setInterval(update, 15000);
+    return () => window.clearInterval(timer);
+  }, []);
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
@@ -183,7 +197,12 @@ export function Sidebar({
               )}
             >
               <Icon size={18} />
-              {label}
+              <span className="flex-1">{label}</span>
+              {todoBadges[href] > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold leading-5 text-white">
+                  {todoBadges[href] > 99 ? "99+" : todoBadges[href]}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

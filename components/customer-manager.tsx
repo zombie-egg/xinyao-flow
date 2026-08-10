@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 type Activity = {
   id: string;
@@ -19,6 +20,7 @@ type Customer = {
   address: string | null;
   contactInfo: string | null;
   remark: string | null;
+  customerType: "WON" | "POTENTIAL";
   owner: { id: string; name: string };
   activities: Activity[];
 };
@@ -43,6 +45,10 @@ export function CustomerManager({
     [editingId, setEditingId] = useState<string | null>(null),
     [savingId, setSavingId] = useState<string | null>(null);
   const editingCustomer = items.find((item) => item.id === editingId);
+  useEffect(() => {
+    const timer = window.setInterval(() => router.refresh(), 15000);
+    return () => window.clearInterval(timer);
+  }, [router]);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget),
@@ -216,7 +222,7 @@ export function CustomerManager({
         </Card>
       )}
       <div className="overflow-x-auto rounded-xl border bg-white">
-        <table className="w-full min-w-[1050px] text-left text-sm">
+        <table className="w-full min-w-[1150px] text-left text-sm">
           <thead className="bg-zinc-50 text-zinc-500">
             <tr>
               {[
@@ -226,6 +232,7 @@ export function CustomerManager({
                 "其他联系方式",
                 "地址",
                 "负责销售",
+                "客户分类",
                 "客户流水",
                 "操作",
               ].map((x) => (
@@ -244,6 +251,17 @@ export function CustomerManager({
                 <td className="px-4 py-4">{c.contactInfo || "—"}</td>
                 <td className="px-4 py-4">{c.address || "—"}</td>
                 <td className="whitespace-nowrap px-4 py-4">{c.owner.name}</td>
+                <td className="whitespace-nowrap px-4 py-4">
+                  <Badge
+                    className={
+                      c.customerType === "WON"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : ""
+                    }
+                  >
+                    {c.customerType === "WON" ? "成交客户" : "潜在客户"}
+                  </Badge>
+                </td>
                 <td className="px-4 py-4">
                   <Button
                     type="button"

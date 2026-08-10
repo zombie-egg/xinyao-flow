@@ -1,1 +1,49 @@
-import {requireUser} from '@/lib/auth';import {Sidebar} from '@/components/sidebar';import {db} from '@/lib/db';export default async function Portal({children}:{children:React.ReactNode}){const [u,company]=await Promise.all([requireUser(),db.companySetting.findUnique({where:{id:'company'}})]);return <><Sidebar company={{name:company?.companyName||'企业',logoUrl:company?.logoUrl||null}} user={{name:u.name,avatarUrl:u.avatarUrl,jobTitle:u.jobTitle,role:u.role.code,permissions:u.role.code==='ADMIN'?['dashboard:view','attendance:self','attendance:all','leave:create','approval:all','contract:all','order:finance','statistics:view','user:manage','settings:manage','logs:view']:u.role.permissions.map(x=>x.permission.code)}}/><main className="min-h-screen p-5 pt-20 lg:ml-64 lg:p-8">{children}</main></>}
+import { requireUser } from "@/lib/auth";
+import { Sidebar } from "@/components/sidebar";
+import { db } from "@/lib/db";
+import { todoCounts } from "@/lib/todo-counts";
+export default async function Portal({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const u = await requireUser(),
+    [company, badges] = await Promise.all([
+      db.companySetting.findUnique({ where: { id: "company" } }),
+      todoCounts(u),
+    ]);
+  return (
+    <>
+      <Sidebar
+        badges={badges}
+        company={{
+          name: company?.companyName || "企业",
+          logoUrl: company?.logoUrl || null,
+        }}
+        user={{
+          name: u.name,
+          avatarUrl: u.avatarUrl,
+          jobTitle: u.jobTitle,
+          role: u.role.code,
+          permissions:
+            u.role.code === "ADMIN"
+              ? [
+                  "dashboard:view",
+                  "attendance:self",
+                  "attendance:all",
+                  "leave:create",
+                  "approval:all",
+                  "contract:all",
+                  "order:finance",
+                  "statistics:view",
+                  "user:manage",
+                  "settings:manage",
+                  "logs:view",
+                ]
+              : u.role.permissions.map((x) => x.permission.code),
+        }}
+      />
+      <main className="min-h-screen p-5 pt-20 lg:ml-64 lg:p-8">{children}</main>
+    </>
+  );
+}

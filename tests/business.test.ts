@@ -10,6 +10,8 @@ import {
   timeOnChinaDay,
 } from "../lib/attendance";
 import { businessOrderStatus } from "../lib/order-workflow";
+import {chinaDateNumber,documentNumber} from '../lib/document-number';
+import {normalizeCustomerContact} from '../lib/customer';
 describe("考勤距离", () => {
   it("同一坐标距离为 0", () =>
     expect(
@@ -120,3 +122,4 @@ describe("订单业务状态", () => {
     ).toBe("已完成");
   });
 });
+describe('编号与客户去重',()=>{it('按销售工号、日期和流水生成合同与订单编号',()=>{expect(documentNumber('XYXS01','HT','20260810',1)).toBe('XYXS01-HT-20260810-01');expect(documentNumber('XYXS01','DD','20260810',1)).toBe('XYXS01-DD-20260810-01');expect(chinaDateNumber(new Date('2026-08-10T03:00:00Z'))).toBe('20260810')});it('联系人忽略空格和大小写',()=>expect(normalizeCustomerContact(' Jeffrey ')).toBe('jeffrey'))});

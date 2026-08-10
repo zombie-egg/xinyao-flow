@@ -15,6 +15,7 @@ import {
   ReviewActions,
   TechnicalActions,
   InvoiceForm,
+  InvoiceApplicationForm,
   PaymentForm,
 } from "@/components/order-actions";
 export default async function OrderDetail({
@@ -135,6 +136,9 @@ export default async function OrderDetail({
         </Card>
         <Card>
           <h2 className="font-medium">合同文件</h2>
+          <p className="mt-3 text-sm text-zinc-500">
+            合同编号：{order.contract.contractNumber || "全部审批后生成"}
+          </p>
           {order.contract.fileUrl ? (
             <a
               href={order.contract.fileUrl}
@@ -150,6 +154,12 @@ export default async function OrderDetail({
         <Card>
           <h2 className="font-medium">财务信息</h2>
           <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-zinc-500">销售开票申请</p>
+              <p className="mt-1 font-medium">
+                {processStatusText[order.invoiceApplicationStatus]}
+              </p>
+            </div>
             <div>
               <p className="text-zinc-500">发票状态</p>
               <p className="mt-1 font-medium">
@@ -173,6 +183,20 @@ export default async function OrderDetail({
               <p className="mt-1 font-medium">{money(remaining)}</p>
             </div>
           </div>
+          {order.invoiceApplicationFileUrl && (
+            <a
+              href={order.invoiceApplicationFileUrl}
+              target="_blank"
+              className="mt-4 inline-block text-sm underline"
+            >
+              查看销售上传的开票信息
+            </a>
+          )}
+          {order.invoiceApplicationNote && (
+            <p className="mt-3 whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-sm">
+              开票备注：{order.invoiceApplicationNote}
+            </p>
+          )}
           {order.invoice?.fileUrl && (
             <a
               href={order.invoice.fileUrl}
@@ -211,7 +235,14 @@ export default async function OrderDetail({
               order.approvalStatus === "APPROVED" && (
                 <TechnicalActions id={id} status={order.technicalStatus} />
               )}{" "}
+            {u.role.code.startsWith("SALES") &&
+              order.salesUserId === u.id &&
+              order.approvalStatus === "APPROVED" &&
+              order.invoiceApplicationStatus === "PENDING" && (
+                <InvoiceApplicationForm id={id} />
+              )}{" "}
             {u.role.code.startsWith("FINANCE") &&
+              order.invoiceApplicationStatus === "COMPLETED" &&
               order.invoiceStatus === "PENDING" && <InvoiceForm id={id} />}{" "}
             {u.role.code.startsWith("FINANCE") &&
               order.invoiceStatus === "COMPLETED" &&

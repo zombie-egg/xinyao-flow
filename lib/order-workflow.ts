@@ -39,6 +39,7 @@ export const technicalStatusText: Record<string, string> = {
 export function businessOrderStatus(order: {
   approvalStatus: string;
   invoiceStatus: string;
+  invoiceApplicationStatus?: string;
   paymentStatus: string;
   status: string;
 }) {
@@ -48,15 +49,13 @@ export function businessOrderStatus(order: {
     return order.approvalStatus.endsWith("REJECTED")
       ? "合同已拒绝"
       : "合同待审批";
+  if (order.invoiceApplicationStatus === "PENDING") return "待申请开票";
   if (
     order.invoiceStatus === "PENDING" ||
     order.invoiceStatus === "NOT_REQUIRED"
   )
     return "待开发票";
-  if (
-    order.paymentStatus === "PENDING" ||
-    order.paymentStatus === "PARTIAL"
-  )
+  if (order.paymentStatus === "PENDING" || order.paymentStatus === "PARTIAL")
     return "待收回款";
   return orderStatusText[order.status] || "处理中";
 }

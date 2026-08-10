@@ -168,6 +168,7 @@ model User {
   passwordHash                    String
   phone                           String?
   avatarUrl                       String?
+  employeeNumber                  String?                      @unique
   departmentId                    String?
   roleId                          String
   jobTitle                        String
@@ -298,25 +299,27 @@ model AnnualLeaveRule {
 }
 
 model Customer {
-  id              String             @id @default(cuid())
-  name            String
-  nameNormalized  String             @default("")
-  contact         String
-  phone           String
-  phoneNormalized String             @default("")
-  address         String?
-  contactInfo     String?
-  remark          String?
-  ownerId         String
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  owner           User               @relation(fields: [ownerId], references: [id])
-  contracts       Contract[]
-  orders          Order[]
-  activities      CustomerActivity[]
+  id                String             @id @default(cuid())
+  name              String
+  nameNormalized    String             @default("")
+  contact           String
+  contactNormalized String             @default("")
+  phone             String
+  phoneNormalized   String             @default("")
+  address           String?
+  contactInfo       String?
+  remark            String?
+  ownerId           String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  owner             User               @relation(fields: [ownerId], references: [id])
+  contracts         Contract[]
+  orders            Order[]
+  activities        CustomerActivity[]
 
   @@unique([nameNormalized, phoneNormalized])
   @@index([ownerId, name])
+  @@index([contactNormalized])
 }
 
 model CustomerActivity {
@@ -356,39 +359,46 @@ model Contract {
 }
 
 model Order {
-  id                  String              @id @default(cuid())
-  orderNumber         String?             @unique
-  contractId          String              @unique
-  customerId          String
-  salesUserId         String
-  financeUserId       String?
-  technicalUserId     String?
-  name                String              @default("未命名订单")
-  contact             String?
-  phone               String?
-  address             String?
-  contactInfo         String?
-  projectRequirements String              @default("")
-  remark              String?
-  amount              Decimal             @db.Decimal(14, 2)
-  approvalStatus      OrderApprovalStatus @default(DRAFT)
-  technicalStatus     TechnicalStatus     @default(PENDING)
-  invoiceRequired     Boolean?
-  invoiceStatus       ProcessStatus       @default(NOT_REQUIRED)
-  paymentStatus       ProcessStatus       @default(NOT_REQUIRED)
-  paidAmount          Decimal             @default(0) @db.Decimal(14, 2)
-  status              OrderStatus         @default(DRAFT)
-  approvedAt          DateTime?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  contract            Contract            @relation(fields: [contractId], references: [id])
-  customer            Customer            @relation(fields: [customerId], references: [id])
-  salesUser           User                @relation("SalesOrders", fields: [salesUserId], references: [id])
-  financeUser         User?               @relation("FinanceOrders", fields: [financeUserId], references: [id])
-  technicalUser       User?               @relation("TechnicalOrders", fields: [technicalUserId], references: [id])
-  invoice             Invoice?
-  payments            Payment[]
-  approvals           ContractApproval[]
+  id                         String              @id @default(cuid())
+  orderNumber                String?             @unique
+  contractId                 String              @unique
+  customerId                 String
+  salesUserId                String
+  financeUserId              String?
+  technicalUserId            String?
+  name                       String              @default("未命名订单")
+  contact                    String?
+  phone                      String?
+  address                    String?
+  contactInfo                String?
+  projectRequirements        String              @default("")
+  remark                     String?
+  amount                     Decimal             @db.Decimal(14, 2)
+  approvalStatus             OrderApprovalStatus @default(DRAFT)
+  technicalStatus            TechnicalStatus     @default(PENDING)
+  invoiceRequired            Boolean?
+  invoiceApplicationStatus   ProcessStatus       @default(NOT_REQUIRED)
+  invoiceApplicationFileUrl  String?
+  invoiceApplicationFileName String?
+  invoiceApplicationFileSize Int?
+  invoiceApplicationFileType String?
+  invoiceApplicationNote     String?
+  invoiceAppliedAt           DateTime?
+  invoiceStatus              ProcessStatus       @default(NOT_REQUIRED)
+  paymentStatus              ProcessStatus       @default(NOT_REQUIRED)
+  paidAmount                 Decimal             @default(0) @db.Decimal(14, 2)
+  status                     OrderStatus         @default(DRAFT)
+  approvedAt                 DateTime?
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+  contract                   Contract            @relation(fields: [contractId], references: [id])
+  customer                   Customer            @relation(fields: [customerId], references: [id])
+  salesUser                  User                @relation("SalesOrders", fields: [salesUserId], references: [id])
+  financeUser                User?               @relation("FinanceOrders", fields: [financeUserId], references: [id])
+  technicalUser              User?               @relation("TechnicalOrders", fields: [technicalUserId], references: [id])
+  invoice                    Invoice?
+  payments                   Payment[]
+  approvals                  ContractApproval[]
 
   @@index([status, createdAt])
 }
