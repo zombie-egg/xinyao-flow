@@ -49,7 +49,7 @@ export function OrderList({
         </Link>
       </div>
       <div className="overflow-x-auto rounded-xl border bg-white">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-[1180px] whitespace-nowrap text-left text-sm">
           <thead className="bg-zinc-50 text-zinc-500">
             <tr>
               {[

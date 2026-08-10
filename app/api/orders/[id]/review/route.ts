@@ -23,7 +23,7 @@ export async function PATCH(
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
     const order = await db.order.findUnique({
       where: { id },
-      include: { salesUser: true },
+      include: { salesUser: true,contract:true },
     });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
     const managerStage = order.approvalStatus === "PENDING_SALES_MANAGER",
@@ -73,28 +73,12 @@ export async function PATCH(
       else {
         if (!order.salesUser.employeeNumber)
           throw new Error("EMPLOYEE_NUMBER_REQUIRED");
-        const date = chinaDateNumber(),
-          prefix = `${order.salesUser.employeeNumber}-DD-${date}-`;
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order-number-${order.salesUser.employeeNumber}-${date}`}))`;
-        const count = await tx.order.count({
-          where: { orderNumber: { startsWith: prefix } },
-        });
-        const sequence = count + 1;
-        contractNumber = documentNumber(
-          order.salesUser.employeeNumber,
-          "HT",
-          date,
-          sequence,
-        );
+        contractNumber=order.contract.contractNumber||undefined;
+        if(!contractNumber){const date=chinaDateNumber();await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`contract-number-${order.salesUser.employeeNumber}-${date}`}))`;const count=await tx.contract.count({where:{contractNumber:{startsWith:date,endsWith:order.salesUser.employeeNumber}}});contractNumber=documentNumber(order.salesUser.employeeNumber,date,count+1)}
         data = {
           approvalStatus: "APPROVED" as const,
           status: "APPROVED" as const,
-          orderNumber: documentNumber(
-            order.salesUser.employeeNumber,
-            "DD",
-            date,
-            sequence,
-          ),
+          orderNumber: contractNumber,
           approvedAt: new Date(),
           technicalStatus: "PENDING" as const,
           technicalUserId: null,

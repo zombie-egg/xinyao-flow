@@ -122,4 +122,4 @@ describe("订单业务状态", () => {
     ).toBe("已完成");
   });
 });
-describe('编号与客户去重',()=>{it('按销售工号、日期和流水生成合同与订单编号',()=>{expect(documentNumber('XYXS01','HT','20260810',1)).toBe('XYXS01-HT-20260810-01');expect(documentNumber('XYXS01','DD','20260810',1)).toBe('XYXS01-DD-20260810-01');expect(chinaDateNumber(new Date('2026-08-10T03:00:00Z'))).toBe('20260810')});it('联系人忽略空格和大小写',()=>expect(normalizeCustomerContact(' Jeffrey ')).toBe('jeffrey'))});
+describe('编号与客户去重',()=>{it('按日期、流水和销售工号生成合同与订单编号',()=>{expect(documentNumber('XYXS01','20260810',1)).toBe('2026081001XYXS01');expect(chinaDateNumber(new Date('2026-08-10T03:00:00Z'))).toBe('20260810')});it('联系人忽略空格和大小写',()=>expect(normalizeCustomerContact(' Jeffrey ')).toBe('jeffrey'))});

@@ -27,9 +27,10 @@ docker run --name enterprise-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 
 ```text
 销售创建客户和订单并上传合同
+（合同编号按 YYYYMMDD + 2 位流水号 + 销售工号即时生成）
 → 销售经理审核
 → 财务审核
-→ 管理员审核并生成 YYYYMMDD + 4 位流水号
+→ 管理员审核通过并将同一编号写入订单号
 → 技术经理分配给技术员工
 → 技术员工接收并完成任务
 → 财务处理发票

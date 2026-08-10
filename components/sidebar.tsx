@@ -44,6 +44,7 @@ const menus = {
     ["/attendance", "我的考勤", Clock3],
     ["/leave", "请假申请", CalendarDays],
     ["/customers", "客户管理", ContactRound],
+    ["/employees", "员工名单", Users],
     ["/orders/new", "新建订单", FilePlus2],
     ["/orders", "我的订单", ShoppingCart],
     ["/performance", "我的业绩", Trophy],
@@ -55,7 +56,7 @@ const menus = {
     ["/leave", "请假申请", CalendarDays],
     ["/approvals", "请假审批", CalendarDays],
     ["/attendance-processing", "考勤处理", Archive],
-    ["/employees", "员工管理", Users],
+    ["/employees", "员工名单", Users],
     ["/customers", "客户管理", ContactRound],
     ["/orders/new", "新建订单", FilePlus2],
     ["/orders", "订单管理", ShoppingCart],
@@ -161,7 +162,7 @@ export function Sidebar({
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-white p-4 transition-transform lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden border-r bg-white p-4 transition-transform lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -185,7 +186,7 @@ export function Sidebar({
             <p className="text-xs text-zinc-400">业务管理系统</p>
           </div>
         </div>
-        <nav className="mt-6 flex-1 space-y-1">
+        <nav className="mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
           {items.map(([href, label, Icon]) => (
             <Link
               key={href}

@@ -11,9 +11,8 @@ export function chinaDateNumber(date = new Date()) {
 
 export function documentNumber(
   employeeNumber: string,
-  type: "HT" | "DD",
   date: string,
   sequence: number,
 ) {
-  return `${employeeNumber}-${type}-${date}-${String(sequence).padStart(2, "0")}`;
+  return `${date}${String(sequence).padStart(2, "0")}${employeeNumber}`;
 }

@@ -72,6 +72,16 @@ enum ContractStatus {
   CANCELLED
 }
 
+enum BusinessType {
+  ENVIRONMENTAL_MONITORING
+  PUBLIC_HEALTH
+}
+
+enum ContractSigningStatus {
+  SIGNED
+  PENDING_SIGNATURE
+}
+
 enum OrderStatus {
   DRAFT
   PENDING_SALES_MANAGER
@@ -187,6 +197,9 @@ model User {
   customers                       Customer[]
   customerActivities              CustomerActivity[]
   contracts                       Contract[]
+  contractsSigned                 Contract[]                   @relation("ContractSigner")
+  contractsResponsible            Contract[]                   @relation("ContractResponsible")
+  contractsCollaborated           Contract[]                   @relation("ContractCollaborator")
   salesOrders                     Order[]                      @relation("SalesOrders")
   financeOrders                   Order[]                      @relation("FinanceOrders")
   technicalOrders                 Order[]                      @relation("TechnicalOrders")
@@ -335,25 +348,42 @@ model CustomerActivity {
 }
 
 model Contract {
-  id             String         @id @default(cuid())
-  contractNumber String?        @unique
-  name           String
-  customerId     String
-  salesUserId    String
-  amount         Decimal        @db.Decimal(14, 2)
-  dealPrice      Decimal        @db.Decimal(14, 2)
-  contractDate   DateTime
-  fileUrl        String?
-  fileName       String?
-  fileSize       Int?
-  fileType       String?
-  status         ContractStatus @default(DRAFT)
-  remark         String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  customer       Customer       @relation(fields: [customerId], references: [id])
-  salesUser      User           @relation(fields: [salesUserId], references: [id])
-  order          Order?
+  id                  String                @id @default(cuid())
+  contractNumber      String?               @unique
+  name                String
+  businessType        BusinessType          @default(ENVIRONMENTAL_MONITORING)
+  signingStatus       ContractSigningStatus @default(SIGNED)
+  customerId          String
+  salesUserId         String
+  signerId            String?
+  responsibleUserId   String?
+  collaboratorId      String?
+  productTotal        Decimal               @default(0) @db.Decimal(14, 2)
+  amount              Decimal               @db.Decimal(14, 2)
+  dealPrice           Decimal               @db.Decimal(14, 2)
+  technicalSupportFee Decimal               @default(0) @db.Decimal(14, 2)
+  outsourcingFee      Decimal               @default(0) @db.Decimal(14, 2)
+  reviewFee           Decimal               @default(0) @db.Decimal(14, 2)
+  otherExpense        Decimal               @default(0) @db.Decimal(14, 2)
+  netOrderAmount      Decimal               @default(0) @db.Decimal(14, 2)
+  adjustedNetAmount   Decimal?              @db.Decimal(14, 2)
+  expenseDetails      String?
+  originalExpenseNote String?
+  contractDate        DateTime
+  fileUrl             String?
+  fileName            String?
+  fileSize            Int?
+  fileType            String?
+  status              ContractStatus        @default(DRAFT)
+  remark              String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  customer            Customer              @relation(fields: [customerId], references: [id])
+  salesUser           User                  @relation(fields: [salesUserId], references: [id])
+  signer              User?                 @relation("ContractSigner", fields: [signerId], references: [id])
+  responsibleUser     User?                 @relation("ContractResponsible", fields: [responsibleUserId], references: [id])
+  collaborator        User?                 @relation("ContractCollaborator", fields: [collaboratorId], references: [id])
+  order               Order?
 
   @@index([salesUserId, status])
 }

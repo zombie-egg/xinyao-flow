@@ -17,10 +17,10 @@ export default async function Employees({
 }) {
   const viewer = await requireUser(),
     admin = viewer.role.code === "ADMIN",
-    manager =
-      viewer.role.code === "SALES_MANAGER" ||
-      viewer.role.code === "TECH_MANAGER";
-  if (!admin && !manager) throw new Error("FORBIDDEN");
+    salesViewer=viewer.role.code.startsWith('SALES'),
+    manager = viewer.role.code === "TECH_MANAGER",
+    canBrowseDepartments=admin||salesViewer;
+  if (!admin && !salesViewer&&!manager) throw new Error("FORBIDDEN");
   const params = await searchParams,
     q = params.q?.trim() || "",
     department = departments.some(([code]) => code === params.department)
@@ -29,7 +29,7 @@ export default async function Employees({
     [users, counts] = await Promise.all([
       db.user.findMany({
         where: {
-          ...(admin
+          ...(canBrowseDepartments
             ? { department: { code: department } }
             : { departmentId: viewer.departmentId }),
           ...(q
@@ -49,7 +49,7 @@ export default async function Employees({
         orderBy: { createdAt: "desc" },
         take: 500,
       }),
-      admin
+      canBrowseDepartments
         ? Promise.all(
             departments.map(([code]) =>
               db.user.count({ where: { department: { code } } }),
@@ -63,7 +63,7 @@ export default async function Employees({
       employmentStartDate: x.employmentStartDate.toISOString(),
       annualLeaveUsed: Number(x.annualLeaveUsed),
     })),
-    currentName = admin
+    currentName = canBrowseDepartments
       ? departments.find(([code]) => code === department)?.[1] || "财务部"
       : viewer.department?.name || "本部门",
     suffix = q ? `&q=${encodeURIComponent(q)}` : "";
@@ -74,10 +74,10 @@ export default async function Employees({
         description={
           admin
             ? "财务、销售和技术部门分别管理；管理员可编辑工号和入职时间"
-            : "查看本部门员工和考勤详情，部门经理没有编辑权限"
+            : salesViewer?"查看财务、销售和技术部门全员名单；销售没有编辑权限":"查看本部门员工和考勤详情，部门经理没有编辑权限"
         }
       />
-      {admin && (
+      {canBrowseDepartments && (
         <div className="mb-5 flex flex-wrap gap-2">
           {departments.map(([code, name], index) => (
             <Link
@@ -100,8 +100,8 @@ export default async function Employees({
       <SearchForm
         defaultValue={q}
         placeholder="搜索姓名、账号、工号、电话、角色或职位"
-        hidden={admin ? { department } : undefined}
-        clearHref={admin ? `/employees?department=${department}` : "/employees"}
+        hidden={canBrowseDepartments ? { department } : undefined}
+        clearHref={canBrowseDepartments ? `/employees?department=${department}` : "/employees"}
       />
       <h2 className="mb-3 font-medium">
         {currentName}{" "}
