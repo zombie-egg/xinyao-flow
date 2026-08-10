@@ -1,8 +1,42 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+export function RejectedOrderActions({ id }: { id: string }) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  async function cancel() {
+    if (!confirm("确定取消这个订单吗？取消后不能再次提交审核。")) return;
+    const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+    const body = await res.json();
+    if (!res.ok) {
+      setMessage(body.message || "取消失败");
+      return;
+    }
+    router.refresh();
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-red-600">
+        合同审核未通过，您可以修改后重新提交，或者取消该订单。
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={`/orders/${id}/edit`}
+          className="inline-flex h-10 items-center rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white"
+        >
+          修改并重新提交
+        </Link>
+        <Button type="button" variant="outline" onClick={cancel}>
+          取消订单
+        </Button>
+      </div>
+      {message && <p className="text-sm text-red-600">{message}</p>}
+    </div>
+  );
+}
 export function ReviewActions({ id }: { id: string }) {
   const router = useRouter();
   async function review(result: "APPROVE" | "REJECT") {

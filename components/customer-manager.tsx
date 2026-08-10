@@ -51,25 +51,30 @@ export function CustomerManager({
   }, [router]);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const f = new FormData(e.currentTarget),
-      res = await fetch("/api/customers", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(f.entries())),
-      }),
-      body = await res.json();
-    if (!res.ok) {
-      setMessage(body.message);
-      return;
-    }
-    if (returnTo) {
-      router.push(returnTo);
+    setMessage("");
+    try {
+      const f = new FormData(e.currentTarget),
+        res = await fetch("/api/customers", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(Object.fromEntries(f.entries())),
+        }),
+        body = await res.json();
+      if (!res.ok) {
+        setMessage(body.message || "保存失败，请检查填写内容");
+        return;
+      }
+      if (returnTo) {
+        router.push(returnTo);
+        router.refresh();
+        return;
+      }
+      setMessage("客户创建成功");
+      setShow(false);
       router.refresh();
-      return;
+    } catch {
+      setMessage("网络或服务器响应异常，请稍后重试");
     }
-    setMessage("客户创建成功");
-    setShow(false);
-    router.refresh();
   }
   async function addActivity(
     customerId: string,

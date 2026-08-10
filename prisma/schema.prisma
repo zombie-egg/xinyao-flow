@@ -205,6 +205,8 @@ model User {
   technicalOrders                 Order[]                      @relation("TechnicalOrders")
   orderApprovals                  ContractApproval[]
   paymentsRecorded                Payment[]                    @relation("RecordedPayments")
+  receivablesResponsible          Receivable[]                 @relation("ReceivableResponsible")
+  receivablesCollaborated         Receivable[]                 @relation("ReceivableCollaborator")
   logs                            OperationLog[]
   notifications                   Notification[]
   attendanceRequirementsPublished DailyAttendanceRequirement[]
@@ -428,9 +430,30 @@ model Order {
   technicalUser              User?               @relation("TechnicalOrders", fields: [technicalUserId], references: [id])
   invoice                    Invoice?
   payments                   Payment[]
+  receivable                 Receivable?
   approvals                  ContractApproval[]
 
   @@index([status, createdAt])
+}
+
+model Receivable {
+  id                 String   @id @default(cuid())
+  orderId            String   @unique
+  number             String   @unique
+  amount             Decimal  @db.Decimal(14, 2)
+  expectedDate       DateTime
+  paymentType        String?
+  remark             String?
+  responsibleUserId  String
+  collaboratorUserId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  responsibleUser    User     @relation("ReceivableResponsible", fields: [responsibleUserId], references: [id])
+  collaboratorUser   User?    @relation("ReceivableCollaborator", fields: [collaboratorUserId], references: [id], onDelete: SetNull)
+
+  @@index([expectedDate])
+  @@index([responsibleUserId])
 }
 
 model Invoice {

@@ -56,8 +56,14 @@ export async function todoCounts(user: {
     counts["/finance/payments"] = await db.order.count({
       where: {
         approvalStatus: "APPROVED",
-        invoiceStatus: "COMPLETED",
-        paymentStatus: { in: ["PENDING", "PARTIAL"] },
+        paymentStatus: { not: "COMPLETED" },
+        OR: [
+          { receivable: { isNot: null } },
+          {
+            invoiceStatus: "COMPLETED",
+            paymentStatus: { in: ["PENDING", "PARTIAL"] },
+          },
+        ],
       },
     });
   }

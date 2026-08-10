@@ -43,6 +43,7 @@ export function businessOrderStatus(order: {
   paymentStatus: string;
   status: string;
 }) {
+  if (order.status === "CANCELLED") return "已取消";
   if (order.status === "COMPLETED" || order.paymentStatus === "COMPLETED")
     return "已完成";
   if (order.approvalStatus !== "APPROVED")

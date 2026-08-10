@@ -12,6 +12,7 @@ import {
 import { businessOrderStatus } from "../lib/order-workflow";
 import {chinaDateNumber,documentNumber} from '../lib/document-number';
 import {normalizeCustomerContact} from '../lib/customer';
+import { orderFormSchema } from "../lib/order-input";
 describe("考勤距离", () => {
   it("同一坐标距离为 0", () =>
     expect(
@@ -123,3 +124,35 @@ describe("订单业务状态", () => {
   });
 });
 describe('编号与客户去重',()=>{it('按日期、流水和销售工号生成合同与订单编号',()=>{expect(documentNumber('XYXS01','20260810',1)).toBe('2026081001XYXS01');expect(chinaDateNumber(new Date('2026-08-10T03:00:00Z'))).toBe('20260810')});it('联系人忽略空格和大小写',()=>expect(normalizeCustomerContact(' Jeffrey ')).toBe('jeffrey'))});
+describe("订单表单", () => {
+  it("销售经理提交完整订单和应收款时可通过校验", () => {
+    const result = orderFormSchema.safeParse({
+      customerId: "customer",
+      name: "环境检测订单",
+      businessType: "ENVIRONMENTAL_MONITORING",
+      productTotal: "2000",
+      amount: "1900",
+      technicalSupportFee: "0",
+      outsourcingFee: "0",
+      reviewFee: "",
+      otherExpense: "",
+      expenseDetails: "",
+      originalExpenseNote: "",
+      adjustedNetAmount: "",
+      signingStatus: "SIGNED",
+      contractDate: "2026-08-11",
+      signerId: "signer",
+      responsibleUserId: "responsible",
+      collaboratorId: "collaborator",
+      projectRequirements: "完成环境监测服务",
+      remark: "",
+      receivableAmount: "1900",
+      receivableExpectedDate: "2026-09-01",
+      receivablePaymentType: "对公转账",
+      receivableRemark: "",
+      receivableResponsibleUserId: "finance-owner",
+      receivableCollaboratorUserId: "",
+    });
+    expect(result.success).toBe(true);
+  });
+});

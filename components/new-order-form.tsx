@@ -21,6 +21,37 @@ type Staff = {
   department: { code: string; name: string } | null;
   role: { code: string };
 };
+export type OrderFormInitial = {
+  customerId: string;
+  contractNumber: string | null;
+  businessType: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH";
+  productTotal: number;
+  amount: number;
+  technicalSupportFee: number;
+  outsourcingFee: number;
+  reviewFee: number;
+  otherExpense: number;
+  adjustedNetAmount: number | null;
+  expenseDetails: string | null;
+  originalExpenseNote: string | null;
+  name: string;
+  signingStatus: "SIGNED" | "PENDING_SIGNATURE";
+  contractDate: string;
+  signerId: string | null;
+  responsibleUserId: string | null;
+  collaboratorId: string | null;
+  projectRequirements: string;
+  remark: string | null;
+  receivable: {
+    number: string;
+    amount: number;
+    expectedDate: string;
+    paymentType: string | null;
+    remark: string | null;
+    responsibleUserId: string;
+    collaboratorUserId: string | null;
+  } | null;
+};
 const groups = [
   ["ALL", "全部人员"],
   ["ADMIN", "管理员"],
@@ -40,13 +71,17 @@ function StaffSelector({
   name,
   label,
   staff,
+  required = true,
+  initialId = "",
 }: {
   name: string;
   label: string;
   staff: Staff[];
+  required?: boolean;
+  initialId?: string | null;
 }) {
   const [group, setGroup] = useState("ALL");
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(initialId || "");
   const filtered = staff.filter((x) =>
     group === "ALL"
       ? true
@@ -56,7 +91,7 @@ function StaffSelector({
   );
   return (
     <label className="text-sm">
-      <RequiredLabel>{label}</RequiredLabel>
+      {required ? <RequiredLabel>{label}</RequiredLabel> : label}
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <select
           value={group}
@@ -75,12 +110,12 @@ function StaffSelector({
         </select>
         <select
           name={name}
-          required
+          required={required}
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
           className="h-10 rounded-lg border bg-white px-3"
         >
-          <option value="" disabled>
+          <option value="" disabled={required}>
             请选择{label}
           </option>
           {filtered.map((x) => (
@@ -99,22 +134,29 @@ export function NewOrderForm({
   customers,
   staff,
   employeeNumber,
+  orderId,
+  initial,
 }: {
   customers: Customer[];
   staff: Staff[];
   employeeNumber: string | null;
+  orderId?: string;
+  initial?: OrderFormInitial;
 }) {
   const router = useRouter(),
-    [customerId, setCustomerId] = useState(customers[0]?.id || ""),
+    [customerId, setCustomerId] = useState(
+      initial?.customerId || customers[0]?.id || "",
+    ),
     [customerSearch, setCustomerSearch] = useState(""),
     [message, setMessage] = useState(""),
     [loading, setLoading] = useState(false),
+    [showReceivable, setShowReceivable] = useState(true),
     [amounts, setAmounts] = useState({
-      amount: "",
-      technicalSupportFee: "0",
-      outsourcingFee: "0",
-      reviewFee: "0",
-      otherExpense: "0",
+      amount: initial ? String(initial.amount) : "",
+      technicalSupportFee: String(initial?.technicalSupportFee ?? 0),
+      outsourcingFee: String(initial?.outsourcingFee ?? 0),
+      reviewFee: String(initial?.reviewFee ?? 0),
+      otherExpense: String(initial?.otherExpense ?? 0),
     }),
     selected = customers.find((c) => c.id === customerId),
     visible = customers.filter((c) =>
@@ -165,15 +207,23 @@ export function NewOrderForm({
     setLoading(true);
     const form = new FormData(e.currentTarget);
     form.set("customerId", customerId);
-    const res = await fetch("/api/orders", { method: "POST", body: form }),
-      body = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setMessage(body.message);
-      return;
+    try {
+      const res = await fetch(orderId ? `/api/orders/${orderId}` : "/api/orders", {
+          method: orderId ? "PATCH" : "POST",
+          body: form,
+        }),
+        body = await res.json();
+      if (!res.ok) {
+        setMessage(body.message || "提交失败，请检查填写内容");
+        return;
+      }
+      router.push(`/orders/${body.data.id}`);
+      router.refresh();
+    } catch {
+      setMessage("网络或服务器响应异常，请稍后重试");
+    } finally {
+      setLoading(false);
     }
-    router.push(`/orders/${body.data.id}`);
-    router.refresh();
   }
   const today = new Date().toLocaleDateString("en-CA", {
     timeZone: "Asia/Shanghai",
@@ -199,7 +249,9 @@ export function NewOrderForm({
             <RequiredLabel>合同编号</RequiredLabel>
             <Input
               value={
-                employeeNumber
+                initial?.contractNumber
+                  ? initial.contractNumber
+                  : employeeNumber
                   ? `提交时自动生成：日期 + 流水号 + ${employeeNumber}`
                   : "请先设置销售工号"
               }
@@ -258,6 +310,7 @@ export function NewOrderForm({
               min="0.01"
               step="0.01"
               className="mt-2"
+              defaultValue={initial?.productTotal}
               required
             />
           </label>
@@ -282,6 +335,7 @@ export function NewOrderForm({
               min="0"
               step="0.01"
               className="mt-2"
+              defaultValue={initial?.adjustedNetAmount ?? ""}
             />
           </label>
           <label className="text-sm md:col-span-2">
@@ -289,6 +343,7 @@ export function NewOrderForm({
             <textarea
               name="expenseDetails"
               maxLength={3000}
+              defaultValue={initial?.expenseDetails || ""}
               className="mt-2 min-h-24 w-full rounded-lg border p-3 text-sm"
             />
           </label>
@@ -297,6 +352,7 @@ export function NewOrderForm({
             <textarea
               name="originalExpenseNote"
               maxLength={3000}
+              defaultValue={initial?.originalExpenseNote || ""}
               className="mt-2 min-h-20 w-full rounded-lg border p-3 text-sm"
             />
           </label>
@@ -307,14 +363,14 @@ export function NewOrderForm({
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="text-sm">
             <RequiredLabel>订单名称</RequiredLabel>
-            <Input name="name" className="mt-2" required />
+            <Input name="name" defaultValue={initial?.name} className="mt-2" required />
           </label>
           <label className="text-sm">
             <RequiredLabel>合同状态</RequiredLabel>
             <select
               name="signingStatus"
               required
-              defaultValue="SIGNED"
+              defaultValue={initial?.signingStatus || "SIGNED"}
               className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
             >
               <option value="SIGNED">已签订</option>
@@ -326,24 +382,26 @@ export function NewOrderForm({
             <Input
               name="contractDate"
               type="date"
-              defaultValue={today}
+              defaultValue={initial?.contractDate || today}
               className="mt-2"
               required
             />
           </label>
           <div />
-          <StaffSelector name="signerId" label="签订人" staff={staff} />
+          <StaffSelector name="signerId" label="签订人" staff={staff} initialId={initial?.signerId} />
           <StaffSelector
             name="responsibleUserId"
             label="负责人"
             staff={staff}
+            initialId={initial?.responsibleUserId}
           />
-          <StaffSelector name="collaboratorId" label="协同人" staff={staff} />
+          <StaffSelector name="collaboratorId" label="协同人" staff={staff} initialId={initial?.collaboratorId} />
           <label className="text-sm md:col-span-2">
             <RequiredLabel>项目需求</RequiredLabel>
             <textarea
               name="projectRequirements"
               className="mt-2 min-h-36 w-full rounded-lg border p-3 text-sm"
+              defaultValue={initial?.projectRequirements}
               required
             />
           </label>
@@ -351,6 +409,7 @@ export function NewOrderForm({
             订单备注
             <textarea
               name="remark"
+              defaultValue={initial?.remark || ""}
               className="mt-2 min-h-20 w-full rounded-lg border p-3 text-sm"
             />
           </label>
@@ -361,16 +420,106 @@ export function NewOrderForm({
               type="file"
               accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp"
               className="mt-2 h-auto py-2"
-              required
+              required={!orderId}
             />
             <span className="mt-1 block text-xs text-zinc-500">
               支持 PDF、Word、JPG、PNG、WEBP，最大 10MB。
             </span>
           </label>
         </div>
+      </Card>
+      <Card>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-medium">第四步：应收款信息</h2>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowReceivable(!showReceivable)}
+          >
+            {showReceivable ? "收起应收款" : "填写应收款"}
+          </Button>
+        </div>
+        <div className={showReceivable ? "block" : "hidden"}>
+          <p className="mt-2 text-sm text-zinc-500">
+            回款状态由系统根据财务登记的回款自动更新，无需手工填写。
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-sm">
+            <RequiredLabel>编号</RequiredLabel>
+            <Input
+              value={initial?.receivable?.number || "PMO.提交后自动生成的订单号"}
+              readOnly
+              className="mt-2 bg-zinc-50"
+            />
+          </label>
+          <label className="text-sm">
+            <RequiredLabel>应收金额</RequiredLabel>
+            <Input
+              name="receivableAmount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              className="mt-2"
+              defaultValue={initial?.receivable?.amount}
+              required
+            />
+          </label>
+          <label className="text-sm">
+            <RequiredLabel>预计回款日期</RequiredLabel>
+            <Input
+              name="receivableExpectedDate"
+              type="date"
+              min={orderId ? undefined : today}
+              defaultValue={initial?.receivable?.expectedDate || today}
+              className="mt-2"
+              required
+            />
+          </label>
+          <label className="text-sm">
+            回款类型
+            <select
+              name="receivablePaymentType"
+              defaultValue={initial?.receivable?.paymentType || ""}
+              className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
+            >
+              <option value="">请选择</option>
+              <option value="对公转账">对公转账</option>
+              <option value="现金">现金</option>
+              <option value="支票">支票</option>
+              <option value="其他">其他</option>
+            </select>
+          </label>
+          <label className="text-sm md:col-span-2">
+            备注
+            <Input
+              name="receivableRemark"
+              placeholder="填写应收款备注"
+              className="mt-2"
+              defaultValue={initial?.receivable?.remark || ""}
+            />
+          </label>
+          <StaffSelector
+            name="receivableResponsibleUserId"
+            label="负责人"
+            staff={staff}
+            initialId={initial?.receivable?.responsibleUserId}
+          />
+          <StaffSelector
+            name="receivableCollaboratorUserId"
+            label="协同人"
+            staff={staff}
+            required={false}
+            initialId={initial?.receivable?.collaboratorUserId}
+          />
+          </div>
+        </div>
         <div className="mt-5">
-          <Button disabled={loading || netAmount < 0}>
-            {loading ? "正在提交…" : "提交订单审核"}
+          <Button disabled={loading || netAmount < 0 || !showReceivable}>
+            {loading
+              ? "正在提交…"
+              : orderId
+                ? "保存修改并重新提交审核"
+                : "提交订单审核"}
           </Button>
           {message && (
             <span className="ml-3 text-sm text-zinc-500">{message}</span>

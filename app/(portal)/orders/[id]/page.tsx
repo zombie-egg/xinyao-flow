@@ -17,6 +17,7 @@ import {
   InvoiceForm,
   InvoiceApplicationForm,
   PaymentForm,
+  RejectedOrderActions,
 } from "@/components/order-actions";
 export default async function OrderDetail({
   params,
@@ -34,6 +35,9 @@ export default async function OrderDetail({
         financeUser: true,
         contract: {include:{signer:true,responsibleUser:true,collaborator:true}},
         invoice: true,
+        receivable: {
+          include: { responsibleUser: true, collaboratorUser: true },
+        },
         payments: {
           include: { financeUser: true },
           orderBy: { createdAt: "asc" },
@@ -59,7 +63,8 @@ export default async function OrderDetail({
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "asc" },
     }),
-    remaining = Number(order.amount) - Number(order.paidAmount),
+    remaining =
+      Number(order.receivable?.amount || order.amount) - Number(order.paidAmount),
     canManager =
       u.role.code === "SALES_MANAGER" &&
       order.approvalStatus === "PENDING_SALES_MANAGER" &&
@@ -159,6 +164,44 @@ export default async function OrderDetail({
         <Card>
           <h2 className="font-medium">财务信息</h2>
           <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+            {order.receivable && (
+              <>
+                <div>
+                  <p className="text-zinc-500">应收编号</p>
+                  <p className="mt-1 font-medium">{order.receivable.number}</p>
+                </div>
+                <div>
+                  <p className="text-zinc-500">应收金额</p>
+                  <p className="mt-1 font-medium">
+                    {money(Number(order.receivable.amount))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-zinc-500">预计回款日期</p>
+                  <p className="mt-1 font-medium">
+                    {order.receivable.expectedDate.toLocaleDateString("zh-CN")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-zinc-500">回款类型</p>
+                  <p className="mt-1 font-medium">
+                    {order.receivable.paymentType || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-zinc-500">应收负责人</p>
+                  <p className="mt-1 font-medium">
+                    {order.receivable.responsibleUser.name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-zinc-500">应收协同人</p>
+                  <p className="mt-1 font-medium">
+                    {order.receivable.collaboratorUser?.name || "—"}
+                  </p>
+                </div>
+              </>
+            )}
             <div>
               <p className="text-zinc-500">销售开票申请</p>
               <p className="mt-1 font-medium">
@@ -239,6 +282,12 @@ export default async function OrderDetail({
               : "当前可执行操作"}
           </h2>
           <div className="mt-4">
+            {u.role.code.startsWith("SALES") &&
+              order.salesUserId === u.id &&
+              order.status !== "CANCELLED" &&
+              ["MANAGER_REJECTED", "FINANCE_REJECTED", "ADMIN_REJECTED"].includes(
+                order.approvalStatus,
+              ) && <RejectedOrderActions id={id} />}{" "}
             {(canManager || canFinance || canAdmin) && (
               <ReviewActions id={id} />
             )}{" "}

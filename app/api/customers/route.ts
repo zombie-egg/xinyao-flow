@@ -9,9 +9,9 @@ import {
   normalizeCustomerPhone,
 } from "@/lib/customer";
 const schema = z.object({
-  name: z.string().trim().min(2).max(100),
-  contact: z.string().trim().min(2).max(50),
-  phone: z.string().trim().min(5).max(30),
+  name: z.string().trim().min(2, "客户名称至少填写 2 个字").max(100),
+  contact: z.string().trim().min(2, "联系人至少填写 2 个字").max(50),
+  phone: z.string().trim().min(5, "联系电话至少填写 5 位").max(30),
   address: z.string().trim().max(300).optional(),
   contactInfo: z.string().trim().max(300).optional(),
   remark: z.string().trim().max(1000).optional(),
@@ -50,8 +50,14 @@ export async function GET(req: Request) {
 }
 export async function POST(req: Request) {
   try {
-    const u = await requirePermission("customer:create"),
-      p = schema.safeParse(await req.json());
+    const u = await requirePermission("customer:create");
+    let input: unknown;
+    try {
+      input = await req.json();
+    } catch {
+      return fail("客户表单格式无效，请刷新页面后重试", "INVALID_JSON", 400);
+    }
+    const p = schema.safeParse(input);
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
     const { salesUserId, ...data } = p.data,
       ownerId = u.role.code === "ADMIN" ? salesUserId : u.id;
@@ -82,7 +88,7 @@ export async function POST(req: Request) {
           ownerId,
         },
       });
-    });
+    }, { maxWait: 5000, timeout: 15000 });
     await db.operationLog.create({
       data: {
         userId: u.id,

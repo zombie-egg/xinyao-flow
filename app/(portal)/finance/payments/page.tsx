@@ -1,1 +1,137 @@
-import {requirePermission} from '@/lib/auth';import {db} from '@/lib/db';import {PageHeader,Empty} from '@/components/page';import {Card} from '@/components/ui/card';import {PaymentForm} from '@/components/order-actions';import {SearchForm} from '@/components/search-form';import {money} from '@/lib/utils';export default async function Payments({searchParams}:{searchParams:Promise<{q?:string}>}){await requirePermission('payment:manage');const params=await searchParams,q=params.q?.trim()||'',items=await db.order.findMany({where:{approvalStatus:'APPROVED',invoiceStatus:'COMPLETED',paymentStatus:{in:['PENDING','PARTIAL']},...(q?{OR:[{orderNumber:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{customer:{name:{contains:q,mode:'insensitive'}}},{salesUser:{name:{contains:q,mode:'insensitive'}}}]}:{})},include:{customer:true,salesUser:true},orderBy:{approvedAt:'asc'},take:300});return <><PageHeader title="回款待办" description="支持多次部分回款，累计足额后自动标记全部回款"/><SearchForm defaultValue={q} placeholder="搜索订单号、订单名称、客户或销售人员" clearHref="/finance/payments"/>{items.length?<div className="space-y-4">{items.map(x=>{const remaining=Number(x.amount)-Number(x.paidAmount);return <Card key={x.id} className="grid gap-5 lg:grid-cols-[1fr_360px]"><div><a href={`/orders/${x.id}`} className="font-medium hover:underline">{x.orderNumber} · {x.name}</a><p className="mt-2 text-sm text-zinc-500">客户：{x.customer.name} · 销售：{x.salesUser.name}</p><p className="mt-1 text-sm text-zinc-500">订单金额：{money(Number(x.amount))}</p><p className="mt-1 text-sm text-zinc-500">已回款：{money(Number(x.paidAmount))} · 剩余：{money(remaining)}</p></div><PaymentForm id={x.id} remaining={remaining}/></Card>})}</div>:<Empty text={q?'没有匹配的回款待办':'暂无回款待办'}/>}</>}
+import { requirePermission } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { PageHeader, Empty } from "@/components/page";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PaymentForm } from "@/components/order-actions";
+import { SearchForm } from "@/components/search-form";
+import { money } from "@/lib/utils";
+
+export default async function Payments({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  await requirePermission("payment:manage");
+  const params = await searchParams;
+  const q = params.q?.trim() || "";
+  const items = await db.order.findMany({
+    where: {
+      approvalStatus: "APPROVED",
+      status: { not: "CANCELLED" },
+      paymentStatus: { not: "COMPLETED" },
+      AND: [
+        {
+          OR: [
+            { receivable: { isNot: null } },
+            {
+              invoiceStatus: "COMPLETED",
+              paymentStatus: { in: ["PENDING", "PARTIAL"] },
+            },
+          ],
+        },
+        ...(q
+          ? [{
+              OR: [
+              { orderNumber: { contains: q, mode: "insensitive" as const } },
+              { name: { contains: q, mode: "insensitive" as const } },
+              { customer: { name: { contains: q, mode: "insensitive" as const } } },
+              { salesUser: { name: { contains: q, mode: "insensitive" as const } } },
+              {
+                receivable: {
+                  number: { contains: q, mode: "insensitive" as const },
+                },
+              },
+              ],
+            }]
+          : []),
+      ],
+    },
+    include: {
+      customer: true,
+      salesUser: true,
+      receivable: { include: { responsibleUser: true } },
+    },
+    orderBy: { receivable: { expectedDate: "asc" } },
+    take: 300,
+  });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return (
+    <>
+      <PageHeader
+        title="回款待办"
+        description="预计日期已过且尚未足额回款的客户会自动标红提示逾期"
+      />
+      <SearchForm
+        defaultValue={q}
+        placeholder="搜索应收编号、订单号、订单名称、客户或销售人员"
+        clearHref="/finance/payments"
+      />
+      {items.length ? (
+        <div className="space-y-4">
+          {items.map((order) => {
+            const receivable = order.receivable;
+            const total = Number(receivable?.amount || order.amount);
+            const remaining = total - Number(order.paidAmount);
+            const overdue = Boolean(
+              receivable && receivable.expectedDate < today && remaining > 0,
+            );
+            const canRecord = order.invoiceStatus === "COMPLETED";
+            return (
+              <Card
+                key={order.id}
+                className={`grid gap-5 lg:grid-cols-[1fr_360px] ${
+                  overdue ? "border-red-400 bg-red-50/30" : ""
+                }`}
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={`/orders/${order.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {receivable?.number || order.orderNumber} · {order.name}
+                    </a>
+                    {overdue && (
+                      <Badge className="bg-red-100 text-red-700">客户逾期</Badge>
+                    )}
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-500">
+                    订单号：{order.orderNumber} · 客户：{order.customer.name} ·
+                    销售：{order.salesUser.name}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    应收金额：{money(total)} · 已回款：
+                    {money(Number(order.paidAmount))} · 剩余：{money(remaining)}
+                  </p>
+                  {receivable && (
+                    <p className={overdue ? "mt-1 text-sm font-medium text-red-600" : "mt-1 text-sm text-zinc-500"}>
+                      预计回款日期：
+                      {receivable.expectedDate.toLocaleDateString("zh-CN")} ·
+                      负责人：{receivable.responsibleUser.name}
+                    </p>
+                  )}
+                  {receivable?.remark && (
+                    <p className="mt-2 text-sm text-zinc-500">
+                      备注：{receivable.remark}
+                    </p>
+                  )}
+                </div>
+                {canRecord ? (
+                  <PaymentForm id={order.id} remaining={remaining} />
+                ) : (
+                  <div className="rounded-lg bg-zinc-100 p-4 text-sm text-zinc-500">
+                    等待销售提交开票申请并由财务完成发票处理后，即可登记回款。
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Empty text={q ? "没有匹配的回款待办" : "暂无回款待办"} />
+      )}
+    </>
+  );
+}

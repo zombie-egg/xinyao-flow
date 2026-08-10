@@ -38,6 +38,8 @@ docker run --name enterprise-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 → 技术完成、发票完成、全额回款后订单自动完成
 ```
 
+新建订单时同时登记应收款，编号为 `PMO.<订单号>`。预计回款日期已过且未足额回款时，财务回款待办会标记“客户逾期”。合同审核被拒后，负责销售可以修改并重新提交，或直接取消订单。
+
 生产环境执行已有迁移使用 `npm run db:deploy`。每天过旷工判定时间后，由调度器调用 `POST /api/internal/attendance/close`，请求头为 `Authorization: Bearer <CRON_SECRET>`。
 
 ## 检查

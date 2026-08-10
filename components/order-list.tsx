@@ -105,6 +105,19 @@ export function OrderList({
                 {invoiceApplicantId && (
                   <td className="px-4">
                     {x.salesUserId === invoiceApplicantId &&
+                    x.status !== "CANCELLED" &&
+                    [
+                      "MANAGER_REJECTED",
+                      "FINANCE_REJECTED",
+                      "ADMIN_REJECTED",
+                    ].includes(x.approvalStatus) ? (
+                      <Link
+                        href={`/orders/${x.id}/edit`}
+                        className="inline-flex h-8 items-center rounded-lg bg-red-50 px-3 text-sm font-medium text-red-700"
+                      >
+                        修改订单
+                      </Link>
+                    ) : x.salesUserId === invoiceApplicantId &&
                     x.approvalStatus === "APPROVED" &&
                     x.invoiceApplicationStatus === "PENDING" ? (
                       <Link

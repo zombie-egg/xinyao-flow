@@ -1,60 +1,10 @@
 import { db } from "@/lib/db";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
-import { z } from "zod";
 import { saveUpload } from "@/lib/uploads";
 import { chinaDateNumber, documentNumber } from "@/lib/document-number";
+import { contractFileTypes, orderFormSchema } from "@/lib/order-input";
 export const runtime = "nodejs";
-const optionalNumber = z.preprocess(
-  (value) => (value === "" || value == null ? undefined : value),
-  z.coerce.number().nonnegative().optional(),
-);
-const schema = z
-  .object({
-    customerId: z.string().min(1),
-    name: z.string().trim().min(2).max(150),
-    businessType: z.enum(["ENVIRONMENTAL_MONITORING", "PUBLIC_HEALTH"]),
-    productTotal: z.coerce.number().positive(),
-    amount: z.coerce.number().positive(),
-    technicalSupportFee: z.coerce.number().nonnegative(),
-    outsourcingFee: z.coerce.number().nonnegative(),
-    reviewFee: optionalNumber,
-    otherExpense: optionalNumber,
-    expenseDetails: z.string().trim().max(3000).optional(),
-    originalExpenseNote: z.string().trim().max(3000).optional(),
-    adjustedNetAmount: optionalNumber,
-    signingStatus: z.enum(["SIGNED", "PENDING_SIGNATURE"]),
-    contractDate: z.coerce.date(),
-    signerId: z.string().min(1),
-    responsibleUserId: z.string().min(1),
-    collaboratorId: z.string().min(1),
-    projectRequirements: z.string().trim().min(5).max(10000),
-    remark: z.string().trim().max(2000).optional(),
-  })
-  .superRefine((value, ctx) => {
-    const expenses =
-      value.technicalSupportFee +
-      value.outsourcingFee +
-      (value.reviewFee || 0) +
-      (value.otherExpense || 0);
-    if (expenses > value.amount)
-      ctx.addIssue({
-        code: "custom",
-        path: ["amount"],
-        message: "各项费用合计不能超过合同金额",
-      });
-  });
-const fileTypes = new Map([
-  ["application/pdf", "pdf"],
-  ["application/msword", "doc"],
-  [
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "docx",
-  ],
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-]);
 export async function GET() {
   try {
     const u = await requireUser();
@@ -93,13 +43,22 @@ export async function POST(req: Request) {
         "EMPLOYEE_NUMBER_REQUIRED",
         409,
       );
-    const form = await req.formData(),
-      p = schema.safeParse(Object.fromEntries(form.entries()));
+    let form: FormData;
+    try {
+      form = await req.formData();
+    } catch {
+      return fail(
+        "订单文件过大或表单格式无效，请压缩文件后重试",
+        "INVALID_MULTIPART",
+        400,
+      );
+    }
+    const p = orderFormSchema.safeParse(Object.fromEntries(form.entries()));
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
     const file = form.get("contract");
     if (!(file instanceof File) || !file.size)
       return fail("请上传合同文件", "CONTRACT_REQUIRED");
-    if (!fileTypes.has(file.type))
+    if (!contractFileTypes.has(file.type))
       return fail("合同仅支持 PDF、Word、JPG、PNG、WEBP", "INVALID_FILE_TYPE");
     if (file.size > 10 * 1024 * 1024)
       return fail("合同文件不能超过 10MB", "FILE_TOO_LARGE");
@@ -112,16 +71,20 @@ export async function POST(req: Request) {
         p.data.signerId,
         p.data.responsibleUserId,
         p.data.collaboratorId,
+        p.data.receivableResponsibleUserId,
+        ...(p.data.receivableCollaboratorUserId
+          ? [p.data.receivableCollaboratorUserId]
+          : []),
       ],
       staffCount = await db.user.count({
         where: { id: { in: [...new Set(staffIds)] }, status: "ACTIVE" },
       });
     if (staffCount !== new Set(staffIds).size)
-      return fail("签订人、负责人或协同人不存在或已停用", "INVALID_STAFF", 400);
+      return fail("所选负责人或协同人不存在或已停用", "INVALID_STAFF", 400);
     const fileUrl = await saveUpload(file, {
       prefix: "contract",
       subdirectory: "contracts",
-      types: fileTypes,
+      types: contractFileTypes,
       maxBytes: 10 * 1024 * 1024,
     });
     const managerCreated = u.role.code === "SALES_MANAGER",
@@ -199,6 +162,18 @@ export async function POST(req: Request) {
           paymentStatus: "NOT_REQUIRED",
         },
       });
+      await tx.receivable.create({
+        data: {
+          orderId: item.id,
+          number: `PMO.${contractNumber}`,
+          amount: p.data.receivableAmount,
+          expectedDate: p.data.receivableExpectedDate,
+          paymentType: p.data.receivablePaymentType,
+          remark: p.data.receivableRemark,
+          responsibleUserId: p.data.receivableResponsibleUserId,
+          collaboratorUserId: p.data.receivableCollaboratorUserId,
+        },
+      });
       await tx.operationLog.create({
         data: {
           userId: u.id,
@@ -230,7 +205,7 @@ export async function POST(req: Request) {
           })),
         });
       return item;
-    });
+    }, { maxWait: 5000, timeout: 15000 });
     return ok(order, 201);
   } catch (e) {
     return apiError(e);
