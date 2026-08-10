@@ -73,14 +73,22 @@ export function AssignTechnical({
   id,
   employees,
   currentId,
+  currentName,
 }: {
   id: string;
   employees: { id: string; name: string }[];
   currentId: string | null;
+  currentName?: string | null;
 }) {
   const router = useRouter(),
-    [userId, setUserId] = useState(currentId || employees[0]?.id || ""),
+    [userId, setUserId] = useState(employees[0]?.id || ""),
     [message, setMessage] = useState("");
+  if (currentId)
+    return (
+      <div className="min-w-44 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+        已分配{currentName ? `给：${currentName}` : ""}
+      </div>
+    );
   async function assign() {
     const res = await fetch(`/api/orders/${id}/assign`, {
         method: "PATCH",
