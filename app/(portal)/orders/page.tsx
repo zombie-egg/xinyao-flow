@@ -85,7 +85,12 @@ export default async function Orders({
         clearHref={`/orders?status=${statusFilter}`}
       />
       {items.length ? (
-        <OrderList items={items} statusFilter={statusFilter} query={q} />
+        <OrderList
+          items={items}
+          statusFilter={statusFilter}
+          query={q}
+          invoiceApplicantId={u.role.code.startsWith("SALES") ? u.id : undefined}
+        />
       ) : (
         <>
           <div className="mb-4 flex gap-2">

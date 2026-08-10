@@ -229,8 +229,15 @@ export default async function OrderDetail({
             ))}
           </div>
         </Card>
-        <Card>
-          <h2 className="font-medium">当前可执行操作</h2>
+        <Card id="invoice-application">
+          <h2 className="font-medium">
+            {u.role.code.startsWith("SALES") &&
+            order.salesUserId === u.id &&
+            order.approvalStatus === "APPROVED" &&
+            order.invoiceApplicationStatus === "PENDING"
+              ? "申请开票"
+              : "当前可执行操作"}
+          </h2>
           <div className="mt-4">
             {(canManager || canFinance || canAdmin) && (
               <ReviewActions id={id} />

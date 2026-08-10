@@ -4,6 +4,7 @@ import { money, dateTime } from "@/lib/utils";
 import { approvalStatusText, businessOrderStatus } from "@/lib/order-workflow";
 type Item = {
   id: string;
+  salesUserId: string;
   orderNumber: string | null;
   name: string;
   amount: unknown;
@@ -20,10 +21,12 @@ export function OrderList({
   items,
   statusFilter,
   query,
+  invoiceApplicantId,
 }: {
   items: Item[];
   statusFilter: "ALL" | "PROCESSING" | "COMPLETED";
   query?: string;
+  invoiceApplicantId?: string;
 }) {
   const suffix = query ? `&q=${encodeURIComponent(query)}` : "";
   return (
@@ -61,6 +64,7 @@ export function OrderList({
                 "审核状态",
                 "订单状态",
                 "创建时间",
+                ...(invoiceApplicantId ? ["操作"] : []),
               ].map((x) => (
                 <th key={x} className="px-4 py-3 font-medium">
                   {x}
@@ -98,6 +102,22 @@ export function OrderList({
                   </Badge>
                 </td>
                 <td className="px-4 text-zinc-500">{dateTime(x.createdAt)}</td>
+                {invoiceApplicantId && (
+                  <td className="px-4">
+                    {x.salesUserId === invoiceApplicantId &&
+                    x.approvalStatus === "APPROVED" &&
+                    x.invoiceApplicationStatus === "PENDING" ? (
+                      <Link
+                        href={`/invoice-applications#order-${x.id}`}
+                        className="inline-flex h-8 items-center rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white"
+                      >
+                        申请开票
+                      </Link>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
