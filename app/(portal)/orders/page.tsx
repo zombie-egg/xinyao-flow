@@ -32,9 +32,19 @@ export default async function Orders({
   if (!baseWhere) throw new Error("FORBIDDEN");
   const statusWhere =
       statusFilter === "COMPLETED"
-        ? { status: "COMPLETED" as const }
+        ? {
+            OR: [
+              { status: "COMPLETED" as const },
+              { paymentStatus: "COMPLETED" as const },
+            ],
+          }
         : statusFilter === "PROCESSING"
-          ? { status: { not: "COMPLETED" as const } }
+          ? {
+              AND: [
+                { status: { not: "COMPLETED" as const } },
+                { paymentStatus: { not: "COMPLETED" as const } },
+              ],
+            }
           : {},
     searchWhere = q
       ? {

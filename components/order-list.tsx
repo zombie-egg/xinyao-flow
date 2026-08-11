@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Badge } from "./ui/badge";
 import { money, dateTime } from "@/lib/utils";
-import { approvalStatusText, businessOrderStatus } from "@/lib/order-workflow";
+import {
+  approvalStatusText,
+  businessOrderStatus,
+  isOrderCompleted,
+} from "@/lib/order-workflow";
 type Item = {
   id: string;
   salesUserId: string;
@@ -95,7 +99,7 @@ export function OrderList({
                 <td className="px-4">
                   <Badge
                     className={
-                      x.status === "COMPLETED" ? "bg-red-50 text-red-600" : ""
+                      isOrderCompleted(x) ? "bg-red-50 text-red-600" : ""
                     }
                   >
                     {businessOrderStatus(x)}

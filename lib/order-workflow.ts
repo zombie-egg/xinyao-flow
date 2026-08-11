@@ -36,6 +36,12 @@ export const technicalStatusText: Record<string, string> = {
   PROCESSING: "处理中",
   COMPLETED: "技术已完成",
 };
+export function isOrderCompleted(order: {
+  status: string;
+  paymentStatus: string;
+}) {
+  return order.status === "COMPLETED" || order.paymentStatus === "COMPLETED";
+}
 export function businessOrderStatus(order: {
   approvalStatus: string;
   invoiceStatus: string;
@@ -44,8 +50,7 @@ export function businessOrderStatus(order: {
   status: string;
 }) {
   if (order.status === "CANCELLED") return "已取消";
-  if (order.status === "COMPLETED" || order.paymentStatus === "COMPLETED")
-    return "已完成";
+  if (isOrderCompleted(order)) return "已完成";
   if (order.approvalStatus !== "APPROVED")
     return order.approvalStatus.endsWith("REJECTED")
       ? "合同已拒绝"

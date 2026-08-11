@@ -9,7 +9,7 @@ import {
   publishedAttendanceDeadline,
   timeOnChinaDay,
 } from "../lib/attendance";
-import { businessOrderStatus } from "../lib/order-workflow";
+import { businessOrderStatus, isOrderCompleted } from "../lib/order-workflow";
 import {chinaDateNumber,documentNumber} from '../lib/document-number';
 import {normalizeCustomerContact} from '../lib/customer';
 import { orderFormSchema } from "../lib/order-input";
@@ -88,6 +88,11 @@ describe("部署配置", () => {
     expect(safeUploadPath(["..", "secret"])).toBeNull());
 });
 describe("订单业务状态", () => {
+  it("历史订单回款完成时也视为已完成", () => {
+    expect(
+      isOrderCompleted({ status: "IN_PROGRESS", paymentStatus: "COMPLETED" }),
+    ).toBe(true);
+  });
   it("审核、发票、回款阶段按业务顺序显示", () => {
     expect(
       businessOrderStatus({
