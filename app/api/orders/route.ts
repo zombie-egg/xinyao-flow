@@ -11,7 +11,13 @@ export async function GET() {
     let where = {};
     if (u.role.code === "SALES_MANAGER")
       where = { salesUser: { departmentId: u.departmentId } };
-    else if (u.role.code === "SALES_EMPLOYEE") where = { salesUserId: u.id };
+    else if (u.role.code === "SALES_EMPLOYEE")
+      where = {
+        OR: [
+          { salesUserId: u.id },
+          { customer: { collaborators: { some: { userId: u.id } } } },
+        ],
+      };
     else if (u.role.code === "TECH_MANAGER")
       where = { approvalStatus: "APPROVED" as const };
     else if (u.role.code === "TECH_EMPLOYEE")
@@ -37,12 +43,6 @@ export async function POST(req: Request) {
   try {
     const u = await requirePermission("order:create");
     if (!u.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
-    if (!u.employeeNumber)
-      return fail(
-        "请先联系管理员设置销售工号",
-        "EMPLOYEE_NUMBER_REQUIRED",
-        409,
-      );
     let form: FormData;
     try {
       form = await req.formData();
@@ -64,15 +64,32 @@ export async function POST(req: Request) {
       return fail("合同文件不能超过 10MB", "FILE_TOO_LARGE");
     const customer = await db.customer.findUnique({
       where: { id: p.data.customerId },
-      include: { collaborators: { select: { userId: true } } },
+      include: {
+        collaborators: { select: { userId: true } },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            employeeNumber: true,
+            departmentId: true,
+            role: { select: { code: true } },
+          },
+        },
+      },
     });
     if (!customer)
       return fail("客户不存在，请先创建客户", "CUSTOMER_NOT_FOUND", 404);
     const canUseCustomer =
-      u.role.code === "SALES_MANAGER" ||
       customer.ownerId === u.id ||
       customer.collaborators.some((item) => item.userId === u.id);
     if (!canUseCustomer) throw new Error("FORBIDDEN");
+    if (!customer.owner.employeeNumber)
+      return fail(
+        "客户负责销售尚未设置工号，请先联系管理员设置",
+        "EMPLOYEE_NUMBER_REQUIRED",
+        409,
+      );
+    const ownerEmployeeNumber = customer.owner.employeeNumber;
     const staffIds = [
         p.data.signerId,
         p.data.responsibleUserId,
@@ -87,13 +104,26 @@ export async function POST(req: Request) {
       });
     if (staffCount !== new Set(staffIds).size)
       return fail("所选负责人或协同人不存在或已停用", "INVALID_STAFF", 400);
+    const financeCollaborator = await db.user.findFirst({
+      where: {
+        id: p.data.collaboratorId,
+        status: "ACTIVE",
+        OR: [
+          { department: { code: "FINANCE" } },
+          { role: { code: { in: ["FINANCE_MANAGER", "FINANCE_EMPLOYEE"] } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!financeCollaborator)
+      return fail("订单协同人只能选择财务人员", "INVALID_CONTRACT_COLLABORATOR", 400);
     const fileUrl = await saveUpload(file, {
       prefix: "contract",
       subdirectory: "contracts",
       types: contractFileTypes,
       maxBytes: 10 * 1024 * 1024,
     });
-    const managerCreated = u.role.code === "SALES_MANAGER",
+    const managerCreated = customer.owner.role.code === "SALES_MANAGER",
       approvalStatus = managerCreated
         ? "PENDING_FINANCE"
         : "PENDING_SALES_MANAGER",
@@ -108,13 +138,13 @@ export async function POST(req: Request) {
         otherExpense;
     const order = await db.$transaction(async (tx) => {
       const date = chinaDateNumber();
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`contract-number-${u.employeeNumber}-${date}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`contract-number-${ownerEmployeeNumber}-${date}`}))`;
       const count = await tx.contract.count({
           where: {
-            contractNumber: { startsWith: date, endsWith: u.employeeNumber! },
+            contractNumber: { startsWith: date, endsWith: ownerEmployeeNumber },
           },
         }),
-        contractNumber = documentNumber(u.employeeNumber!, date, count + 1);
+        contractNumber = documentNumber(ownerEmployeeNumber, date, count + 1);
       const contract = await tx.contract.create({
         data: {
           name: `${p.data.name}合同`,
@@ -122,7 +152,7 @@ export async function POST(req: Request) {
           businessType: p.data.businessType,
           signingStatus: p.data.signingStatus,
           customerId: customer.id,
-          salesUserId: u.id,
+          salesUserId: customer.ownerId,
           signerId: p.data.signerId,
           responsibleUserId: p.data.responsibleUserId,
           collaboratorId: p.data.collaboratorId,
@@ -149,7 +179,7 @@ export async function POST(req: Request) {
         data: {
           contractId: contract.id,
           customerId: customer.id,
-          salesUserId: u.id,
+          salesUserId: customer.ownerId,
           name: p.data.name,
           contact: customer.contact,
           phone: customer.phone,
@@ -192,7 +222,7 @@ export async function POST(req: Request) {
         : await tx.user.findMany({
             where: {
               role: { code: "SALES_MANAGER" },
-              departmentId: u.departmentId,
+              departmentId: customer.owner.departmentId,
               status: "ACTIVE",
             },
           });

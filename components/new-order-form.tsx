@@ -130,6 +130,38 @@ function StaffSelector({
   );
 }
 
+function FinanceSelector({
+  name,
+  staff,
+  initialId = "",
+}: {
+  name: string;
+  staff: Staff[];
+  initialId?: string | null;
+}) {
+  const financeStaff = staff.filter(
+    (item) => item.department?.code === "FINANCE" || item.role.code.startsWith("FINANCE"),
+  );
+  return (
+    <label className="text-sm">
+      <RequiredLabel>财务协同人</RequiredLabel>
+      <select
+        name={name}
+        required
+        defaultValue={initialId || ""}
+        className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
+      >
+        <option value="" disabled>请选择财务人员</option>
+        {financeStaff.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}{item.employeeNumber ? ` · ${item.employeeNumber}` : ""}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function NewOrderForm({
   customers,
   staff,
@@ -397,7 +429,7 @@ export function NewOrderForm({
             staff={staff}
             initialId={initial?.responsibleUserId}
           />
-          <StaffSelector name="collaboratorId" label="协同人" staff={staff} initialId={initial?.collaboratorId} />
+          <FinanceSelector name="collaboratorId" staff={staff} initialId={initial?.collaboratorId} />
           <label className="text-sm md:col-span-2">
             <RequiredLabel>项目需求</RequiredLabel>
             <textarea

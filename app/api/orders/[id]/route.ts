@@ -79,7 +79,7 @@ export async function PATCH(
     const data = parsed.data;
     const customer = await db.customer.findUnique({ where: { id: data.customerId }, include: { collaborators: { select: { userId: true } } } });
     if (!customer) return fail("客户不存在", "CUSTOMER_NOT_FOUND", 404);
-    if (customer.ownerId !== user.id && !customer.collaborators.some((item) => item.userId === user.id) && user.role.code !== "SALES_MANAGER")
+    if (customer.ownerId !== user.id && !customer.collaborators.some((item) => item.userId === user.id))
       throw new Error("FORBIDDEN");
     const staffIds = [
       data.signerId,
@@ -95,6 +95,19 @@ export async function PATCH(
     });
     if (staffCount !== new Set(staffIds).size)
       return fail("所选负责人或协同人不存在或已停用", "INVALID_STAFF", 400);
+    const financeCollaborator = await db.user.findFirst({
+      where: {
+        id: data.collaboratorId,
+        status: "ACTIVE",
+        OR: [
+          { department: { code: "FINANCE" } },
+          { role: { code: { in: ["FINANCE_MANAGER", "FINANCE_EMPLOYEE"] } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!financeCollaborator)
+      return fail("订单协同人只能选择财务人员", "INVALID_CONTRACT_COLLABORATOR", 400);
 
     const uploaded = form.get("contract");
     let fileData: {

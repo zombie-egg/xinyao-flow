@@ -6,7 +6,6 @@ import {
   businessOrderStatus,
   isOrderCompleted,
 } from "@/lib/order-workflow";
-import { CustomerCollaboratorPicker } from "./customer-collaborator-picker";
 type Item = {
   id: string;
   salesUserId: string;
@@ -26,11 +25,9 @@ type Item = {
 export function OrderList({
   items,
   invoiceApplicantId,
-  salesUsers = [],
 }: {
   items: Item[];
   invoiceApplicantId?: string;
-  salesUsers?: { id: string; name: string }[];
 }) {
   return (
     <>
@@ -111,15 +108,6 @@ export function OrderList({
                       </Link>
                     ) : (
                       <span className="text-zinc-400">—</span>
-                    )}
-                    {x.salesUserId === invoiceApplicantId && (
-                      <div className="mt-2">
-                        <CustomerCollaboratorPicker
-                          customerId={x.customer.id}
-                          salesUsers={salesUsers.filter((item) => item.id !== invoiceApplicantId)}
-                          initialIds={x.customerCollaboratorIds || []}
-                        />
-                      </div>
                     )}
                   </td>
                 )}

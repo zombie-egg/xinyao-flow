@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page";
 import { NewOrderForm, type OrderFormInitial } from "@/components/new-order-form";
-import { customerAccessWhere } from "@/lib/customer-access";
 
 const rejectedStatuses = [
   "MANAGER_REJECTED",
@@ -25,7 +24,12 @@ export default async function EditRejectedOrder({
       include: { contract: true, receivable: true, customer: { include: { collaborators: { select: { userId: true } } } } },
     }),
     db.customer.findMany({
-      where: customerAccessWhere(user),
+      where: {
+        OR: [
+          { ownerId: user.id },
+          { collaborators: { some: { userId: user.id } } },
+        ],
+      },
       select: {
         id: true,
         name: true,

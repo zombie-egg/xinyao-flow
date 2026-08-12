@@ -109,7 +109,6 @@ export default async function Orders({
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}
           invoiceApplicantId={u.role.code.startsWith("SALES") ? u.id : undefined}
-          salesUsers={salesUsers}
         />
       ) : (
         <>

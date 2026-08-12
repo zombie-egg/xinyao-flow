@@ -75,7 +75,7 @@ export default async function Customers({
     <>
       <PageHeader
         title="客户管理"
-        description={canAll ? "查看全部客户；销售经理和管理员可编辑客户" : "仅显示您负责或协同负责的客户"}
+        description={canAll ? "查看全部客户；客户资料仅负责人和客户协同跟进人可修改" : "仅显示您负责或协同跟进的客户"}
       />
       <CustomerFilters params={params} salesUsers={salesUsers} canCreate={canCreate} />
       <CustomerManager
@@ -83,7 +83,6 @@ export default async function Customers({
         currentUserId={user.id}
         salesUsers={salesUsers}
         canAssignOwner={user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER"}
-        canManageAll={user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER"}
         returnTo={params.return}
       />
       {!items.length && <Empty text={q ? "没有匹配的客户" : "暂无客户"} />}

@@ -26,11 +26,15 @@ export async function PATCH(
       include: { collaborators: { select: { userId: true } } },
     });
     if (!existing) return fail("客户不存在", "NOT_FOUND", 404);
-    const managerEdit = user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER";
-    const selfEdit = user.role.code === "SALES_EMPLOYEE" && existing.ownerId === user.id;
-    if (!managerEdit && !selfEdit) throw new Error("FORBIDDEN");
-    const ownerId = managerEdit ? data.salesUserId || existing.ownerId : existing.ownerId;
-    const collaboratorIds = [...new Set(data.collaboratorIds)].filter((value) => value !== ownerId);
+    const canEdit = user.role.code.startsWith("SALES") && (
+      existing.ownerId === user.id ||
+      existing.collaborators.some((item) => item.userId === user.id)
+    );
+    if (!canEdit) throw new Error("FORBIDDEN");
+    const ownerId = existing.ownerId;
+    const collaboratorIds = existing.ownerId === user.id
+      ? [...new Set(data.collaboratorIds)].filter((value) => value !== ownerId)
+      : existing.collaborators.map((item) => item.userId);
     const salesCount = await db.user.count({
       where: {
         id: { in: [ownerId, ...collaboratorIds] },
