@@ -14,6 +14,10 @@ export default async function Customers({
   const params = await searchParams;
   const q = params.q?.trim() || "";
   const access = customerAccessWhere(user);
+  const now = new Date();
+  const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   const filters = {
     status: params.customerStatus,
     nature: params.nature,
@@ -28,6 +32,7 @@ export default async function Customers({
   const where = {
     AND: [
       access,
+      params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { ownerId: user.id } : params.quick === "collaborative" ? { collaborators: { some: { userId: user.id } } } : {},
       q ? { OR: [
         { name: { contains: q, mode: "insensitive" as const } },
         { contact: { contains: q, mode: "insensitive" as const } },

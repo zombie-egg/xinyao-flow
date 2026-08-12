@@ -30,6 +30,10 @@ export default async function Orders({
             ? {}
             : null;
   if (!baseWhere) throw new Error("FORBIDDEN");
+  const now = new Date();
+  const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   const statusWhere =
       statusFilter === "COMPLETED"
         ? {
@@ -70,7 +74,9 @@ export default async function Orders({
       : {},
     extraWhere = {
       AND: [
+        params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { salesUserId: u.id } : params.quick === "collaborative" ? { customer: { collaborators: { some: { userId: u.id } } } } : {},
         params.salesUserId ? { salesUserId: params.salesUserId } : {},
+        params.contractStatus ? { contract: { signingStatus: params.contractStatus as "SIGNED" | "PENDING_SIGNATURE" } } : {},
         params.approvalStatus === "REJECTED" ? { approvalStatus: { in: ["MANAGER_REJECTED" as const,"FINANCE_REJECTED" as const,"ADMIN_REJECTED" as const] } } : params.approvalStatus ? { approvalStatus: params.approvalStatus as "PENDING_SALES_MANAGER"|"PENDING_FINANCE"|"PENDING_ADMIN"|"APPROVED" } : {},
         params.invoiceStage === "TO_APPLY" ? { invoiceApplicationStatus: "PENDING" as const } : params.invoiceStage === "TO_INVOICE" ? { invoiceApplicationStatus: "COMPLETED" as const, invoiceStatus: "PENDING" as const } : params.invoiceStage === "INVOICED" ? { invoiceStatus: "COMPLETED" as const } : {},
         params.paymentStage ? { paymentStatus: params.paymentStage as "PENDING"|"PARTIAL"|"COMPLETED" } : {},
@@ -102,8 +108,6 @@ export default async function Orders({
       {items.length ? (
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}
-          statusFilter={statusFilter}
-          query={q}
           invoiceApplicantId={u.role.code.startsWith("SALES") ? u.id : undefined}
           salesUsers={salesUsers}
         />

@@ -25,40 +25,15 @@ type Item = {
 };
 export function OrderList({
   items,
-  statusFilter,
-  query,
   invoiceApplicantId,
   salesUsers = [],
 }: {
   items: Item[];
-  statusFilter: "ALL" | "PROCESSING" | "COMPLETED";
-  query?: string;
   invoiceApplicantId?: string;
   salesUsers?: { id: string; name: string }[];
 }) {
-  const suffix = query ? `&q=${encodeURIComponent(query)}` : "";
   return (
     <>
-      <div className="mb-4 flex gap-2">
-        <Link
-          href={`/orders?status=ALL${suffix}`}
-          className={`rounded-lg px-3 py-2 text-sm ${statusFilter === "ALL" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}
-        >
-          全部
-        </Link>
-        <Link
-          href={`/orders?status=PROCESSING${suffix}`}
-          className={`rounded-lg px-3 py-2 text-sm ${statusFilter === "PROCESSING" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}
-        >
-          处理中
-        </Link>
-        <Link
-          href={`/orders?status=COMPLETED${suffix}`}
-          className={`rounded-lg px-3 py-2 text-sm ${statusFilter === "COMPLETED" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}
-        >
-          已完成
-        </Link>
-      </div>
       <div className="overflow-x-auto rounded-xl border bg-white">
         <table className="w-full min-w-[1180px] whitespace-nowrap text-left text-sm">
           <thead className="bg-zinc-50 text-zinc-500">
