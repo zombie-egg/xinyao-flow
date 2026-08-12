@@ -77,10 +77,9 @@ export default async function Customers({
         title="客户管理"
         description={canAll ? "查看全部客户；销售经理和管理员可编辑客户" : "仅显示您负责或协同负责的客户"}
       />
-      <CustomerFilters params={params} salesUsers={salesUsers} />
+      <CustomerFilters params={params} salesUsers={salesUsers} canCreate={canCreate} />
       <CustomerManager
         items={items}
-        canCreate={canCreate}
         currentUserId={user.id}
         salesUsers={salesUsers}
         canAssignOwner={user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER"}

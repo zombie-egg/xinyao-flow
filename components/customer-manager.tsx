@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -148,7 +148,6 @@ function CustomerFields({
 
 export function CustomerManager({
   items,
-  canCreate,
   currentUserId,
   salesUsers,
   canAssignOwner,
@@ -156,7 +155,6 @@ export function CustomerManager({
   returnTo,
 }: {
   items: Customer[];
-  canCreate: boolean;
   currentUserId: string;
   salesUsers: SalesUser[];
   canAssignOwner: boolean;
@@ -165,11 +163,31 @@ export function CustomerManager({
 }) {
   const router = useRouter();
   const [show, setShow] = useState(Boolean(returnTo));
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [duplicateQuery, setDuplicateQuery] = useState("");
   const [duplicates, setDuplicates] = useState<Customer[]>([]);
   const editing = items.find((item) => item.id === editingId);
+
+  useEffect(() => {
+    const toggleCreate = () => {
+      setShow((value) => !value);
+      setShowDuplicates(false);
+      setEditingId(null);
+    };
+    const toggleDuplicates = () => {
+      setShowDuplicates((value) => !value);
+      setShow(false);
+      setEditingId(null);
+    };
+    window.addEventListener("customer:toggle-create", toggleCreate);
+    window.addEventListener("customer:toggle-duplicates", toggleDuplicates);
+    return () => {
+      window.removeEventListener("customer:toggle-create", toggleCreate);
+      window.removeEventListener("customer:toggle-duplicates", toggleDuplicates);
+    };
+  }, []);
 
   function payload(form: HTMLFormElement) {
     const data = new FormData(form);
@@ -210,12 +228,11 @@ export function CustomerManager({
   }
   return (
     <>
-      {canCreate && <div className="mb-5 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => document.getElementById("duplicate-search")?.scrollIntoView({ behavior: "smooth" })}>客户查重</Button><Button onClick={() => setShow(!show)}>{show ? "取消" : "新建客户"}</Button></div>}
-      <Card id="duplicate-search" className="mb-5">
+      {showDuplicates && <Card id="duplicate-search" className="mb-5">
         <h2 className="font-medium">全库客户查重</h2>
         <div className="mt-3 flex gap-2"><Input value={duplicateQuery} onChange={(e) => setDuplicateQuery(e.target.value)} placeholder="输入客户名称、联系人、电话、微信、邮箱或其他联系信息" /><Button type="button" onClick={checkDuplicates}>查重</Button></div>
         {duplicates.length > 0 && <div className="mt-4 grid gap-3 md:grid-cols-2">{duplicates.slice(0, 10).map((item) => <Link key={item.id} href={`/customers/${item.id}`} className="rounded-lg border p-3 text-sm hover:bg-zinc-50"><p className="font-medium">{item.name}</p><p className="mt-1 text-zinc-500">{item.contact} · {item.phone} · 负责销售：{item.owner.name}</p></Link>)}</div>}
-      </Card>
+      </Card>}
       {show && <Card className="mb-5"><h2 className="mb-4 font-medium">新建客户</h2><form onSubmit={(e) => save(e)} className="grid gap-4 md:grid-cols-2"><CustomerFields salesUsers={salesUsers} canAssignOwner={canAssignOwner} /><div className="md:col-span-2"><Button>保存客户</Button></div></form></Card>}
       {editing && <Card className="mb-5"><h2 className="mb-4 font-medium">编辑客户</h2><form onSubmit={(e) => save(e, editing.id)} className="grid gap-4 md:grid-cols-2"><CustomerFields customer={editing} salesUsers={salesUsers} canAssignOwner={canAssignOwner} /><div className="md:col-span-2 flex gap-2"><Button>保存修改</Button><Button type="button" variant="outline" onClick={() => setEditingId(null)}>取消</Button></div></form></Card>}
       <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[1450px] whitespace-nowrap text-left text-sm"><thead className="bg-zinc-50 text-zinc-500"><tr>{["客户名称","业务线","行业","联系人","联系电话","负责销售","协同销售","客户状态","客户性质","操作"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead><tbody>{items.map((item) => { const canEdit = canManageAll || item.owner.id === currentUserId; return <tr key={item.id} className="border-t"><td className="px-4 py-4 font-medium">{item.name}</td><td className="px-4">{businessLineText[item.businessLine]}{item.monitoringType ? ` · ${item.monitoringType}` : ""}</td><td className="px-4">{item.industry}</td><td className="px-4">{item.contact}</td><td className="px-4">{item.phone}</td><td className="px-4">{item.owner.name}</td><td className="px-4">{item.collaborators.map((x) => x.user.name).join("、") || "—"}</td><td className="px-4"><Badge>{customerStatusText[item.status]}</Badge></td><td className="px-4">{item.nature || "—"}</td><td className="px-4"><div className="flex gap-2"><Link href={`/customers/${item.id}`} className="inline-flex h-8 items-center rounded-lg border px-3">查看明细</Link><Link href={`/orders/new?customerId=${item.id}`} className="inline-flex h-8 items-center rounded-lg bg-zinc-950 px-3 text-white">新建订单</Link>{canEdit && <Button type="button" variant="outline" className="h-8" onClick={() => setEditingId(item.id)}>编辑</Button>}</div></td></tr>})}</tbody></table></div>
