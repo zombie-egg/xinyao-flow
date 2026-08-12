@@ -12,12 +12,24 @@ export function OrderFilters({ params, salesUsers }: { params: Record<string, st
   const quick = params.quick || "";
   const status = params.status || "ALL";
   const quickItems = [["today", "今日新增"], ["week", "本周新增"], ["mine", "我负责的"], ["collaborative", "我协同的"]] as const;
+  const filterHref = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams();
+    Object.entries(params).forEach(([key, current]) => {
+      if (current) next.set(key, current);
+    });
+    Object.entries(changes).forEach(([key, value]) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    });
+    if (!next.has("status")) next.set("status", "ALL");
+    return `/orders?${next.toString()}`;
+  };
   return (
     <div className="mb-5 space-y-3">
       <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">
-        {quickItems.map(([value, label]) => <Link key={value} href={quick === value && status === "ALL" ? "/orders?status=ALL" : `/orders?status=ALL&quick=${value}`} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${quick === value && status === "ALL" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>{label}</Link>)}
-        <Link href={status === "PROCESSING" ? "/orders?status=ALL" : "/orders?status=PROCESSING"} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "PROCESSING" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>处理中</Link>
-        <Link href={status === "COMPLETED" ? "/orders?status=ALL" : "/orders?status=COMPLETED"} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "COMPLETED" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>已完成</Link>
+        {quickItems.map(([value, label]) => <Link key={value} href={filterHref({ quick: quick === value ? null : value })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${quick === value ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>{label}</Link>)}
+        <Link href={filterHref({ status: status === "PROCESSING" ? "ALL" : "PROCESSING" })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "PROCESSING" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>处理中</Link>
+        <Link href={filterHref({ status: status === "COMPLETED" ? "ALL" : "COMPLETED" })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "COMPLETED" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>已完成</Link>
         <button type="button" onClick={() => setOpen(!open)} className={`inline-flex shrink-0 items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-medium ${open ? "text-zinc-950" : "text-zinc-600"}`}>全部筛选<ChevronDown size={14} className={`transition ${open ? "rotate-180" : ""}`} /></button>
       </div>
       {open && <form className="rounded-xl border bg-white p-4">

@@ -207,6 +207,7 @@ export function CustomerManager({
     if (!res.ok) {
       if (body.code === "CUSTOMER_DUPLICATES") {
         try { setDuplicates(JSON.parse(body.message)); } catch {}
+        setShowDuplicates(true);
         setMessage("发现重复客户，请先核对下面的查重结果");
       } else setMessage(body.message);
       return;
