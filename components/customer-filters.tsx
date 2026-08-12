@@ -40,10 +40,10 @@ export function CustomerFilters({ params, salesUsers, canCreate }: { params: Rec
           <Input name="nature" defaultValue={params.nature} placeholder="客户性质" />
           <Input name="industry" defaultValue={params.industry} placeholder="客户行业" />
           <select name="businessLine" defaultValue={params.businessLine || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部业务线</option><option value="ENVIRONMENTAL_MONITORING">环境检测</option><option value="PUBLIC_HEALTH">公共卫生</option><option value="OCCUPATIONAL_HEALTH">职业卫生</option></select>
-          <Input name="createdFrom" type="date" defaultValue={params.createdFrom} title="创建时间起" />
-          <Input name="createdTo" type="date" defaultValue={params.createdTo} title="创建时间止" />
-          <Input name="updatedFrom" type="date" defaultValue={params.updatedFrom} title="更新时间起" />
-          <Input name="updatedTo" type="date" defaultValue={params.updatedTo} title="更新时间止" />
+          <label className="text-xs text-zinc-400"><span className="mb-1 block">创建时间（开始）</span><Input name="createdFrom" type="date" defaultValue={params.createdFrom} aria-label="创建时间开始" /></label>
+          <label className="text-xs text-zinc-400"><span className="mb-1 block">创建时间（结束）</span><Input name="createdTo" type="date" defaultValue={params.createdTo} aria-label="创建时间结束" /></label>
+          <label className="text-xs text-zinc-400"><span className="mb-1 block">更新时间（开始）</span><Input name="updatedFrom" type="date" defaultValue={params.updatedFrom} aria-label="更新时间开始" /></label>
+          <label className="text-xs text-zinc-400"><span className="mb-1 block">更新时间（结束）</span><Input name="updatedTo" type="date" defaultValue={params.updatedTo} aria-label="更新时间结束" /></label>
         </div>
         <div className="mt-3 flex gap-2"><Button type="submit">筛选</Button><Link href="/customers" className="inline-flex h-10 items-center rounded-lg border px-4 text-sm">清除筛选</Link></div>
       </form>}
