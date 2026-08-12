@@ -127,6 +127,7 @@ export async function PATCH(
           subdirectory: "contracts",
           types: contractFileTypes,
           maxBytes: 10 * 1024 * 1024,
+          optimizeImage: true,
         }),
         fileName: uploaded.name,
         fileSize: uploaded.size,

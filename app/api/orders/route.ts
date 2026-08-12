@@ -122,6 +122,7 @@ export async function POST(req: Request) {
       subdirectory: "contracts",
       types: contractFileTypes,
       maxBytes: 10 * 1024 * 1024,
+      optimizeImage: true,
     });
     const managerCreated = customer.owner.role.code === "SALES_MANAGER",
       approvalStatus = managerCreated

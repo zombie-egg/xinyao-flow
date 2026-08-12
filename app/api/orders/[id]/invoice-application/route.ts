@@ -51,6 +51,7 @@ export async function POST(
       subdirectory: "invoice-applications",
       types,
       maxBytes: 8 * 1024 * 1024,
+      optimizeImage: true,
     });
     const result = await db.$transaction(async (tx) => {
       const item = await tx.order.update({

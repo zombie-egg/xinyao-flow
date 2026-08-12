@@ -61,6 +61,7 @@ export async function POST(
         subdirectory: "invoices",
         types,
         maxBytes: 8 * 1024 * 1024,
+        optimizeImage: true,
       });
       fileData = {
         fileUrl,
