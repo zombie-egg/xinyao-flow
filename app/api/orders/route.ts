@@ -64,9 +64,15 @@ export async function POST(req: Request) {
       return fail("合同文件不能超过 10MB", "FILE_TOO_LARGE");
     const customer = await db.customer.findUnique({
       where: { id: p.data.customerId },
+      include: { collaborators: { select: { userId: true } } },
     });
     if (!customer)
       return fail("客户不存在，请先创建客户", "CUSTOMER_NOT_FOUND", 404);
+    const canUseCustomer =
+      u.role.code === "SALES_MANAGER" ||
+      customer.ownerId === u.id ||
+      customer.collaborators.some((item) => item.userId === u.id);
+    if (!canUseCustomer) throw new Error("FORBIDDEN");
     const staffIds = [
         p.data.signerId,
         p.data.responsibleUserId,
@@ -109,10 +115,6 @@ export async function POST(req: Request) {
           },
         }),
         contractNumber = documentNumber(u.employeeNumber!, date, count + 1);
-      await tx.customer.update({
-        where: { id: customer.id },
-        data: { ownerId: u.id },
-      });
       const contract = await tx.contract.create({
         data: {
           name: `${p.data.name}合同`,

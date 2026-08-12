@@ -40,6 +40,8 @@ docker run --name enterprise-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 
 新建订单时同时登记应收款，编号为 `PMO.<订单号>`。预计回款日期已过且未足额回款时，财务回款待办会标记“客户逾期”。合同审核被拒后，负责销售可以修改并重新提交，或直接取消订单。
 
+客户管理采用负责销售与协同销售权限：普通销售仅能查看自己负责或协同的客户；销售经理、财务和管理员可以查看全部客户。客户状态由业务人员手动维护，客户明细页集中展示联系方式、跟进流水和历史订单。
+
 生产环境执行已有迁移使用 `npm run db:deploy`。每天过旷工判定时间后，由调度器调用 `POST /api/internal/attendance/close`，请求头为 `Authorization: Bearer <CRON_SECRET>`。
 
 ## 检查

@@ -18,12 +18,15 @@ export default async function InvoiceApplications({
   const q = params.q?.trim() || "";
   const orders = await db.order.findMany({
     where: {
-      salesUserId: user.id,
       approvalStatus: "APPROVED",
       invoiceApplicationStatus: "PENDING",
-      ...(q
-        ? {
-            OR: [
+      AND: [
+        { OR: [
+          { salesUserId: user.id },
+          { customer: { collaborators: { some: { userId: user.id } } } },
+        ] },
+        ...(q
+          ? [{ OR: [
               { orderNumber: { contains: q, mode: "insensitive" as const } },
               { name: { contains: q, mode: "insensitive" as const } },
               {
@@ -39,9 +42,9 @@ export default async function InvoiceApplications({
                   },
                 },
               },
-            ],
-          }
-        : {}),
+            ] }]
+          : []),
+      ],
     },
     include: { customer: true, contract: true },
     orderBy: { approvedAt: "asc" },

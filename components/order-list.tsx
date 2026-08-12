@@ -6,6 +6,7 @@ import {
   businessOrderStatus,
   isOrderCompleted,
 } from "@/lib/order-workflow";
+import { CustomerCollaboratorPicker } from "./customer-collaborator-picker";
 type Item = {
   id: string;
   salesUserId: string;
@@ -18,7 +19,8 @@ type Item = {
   paymentStatus: string;
   status: string;
   createdAt: Date;
-  customer: { name: string };
+  customer: { id: string; name: string };
+  customerCollaboratorIds?: string[];
   salesUser: { name: string };
 };
 export function OrderList({
@@ -26,11 +28,13 @@ export function OrderList({
   statusFilter,
   query,
   invoiceApplicantId,
+  salesUsers = [],
 }: {
   items: Item[];
   statusFilter: "ALL" | "PROCESSING" | "COMPLETED";
   query?: string;
   invoiceApplicantId?: string;
+  salesUsers?: { id: string; name: string }[];
 }) {
   const suffix = query ? `&q=${encodeURIComponent(query)}` : "";
   return (
@@ -108,7 +112,7 @@ export function OrderList({
                 <td className="px-4 text-zinc-500">{dateTime(x.createdAt)}</td>
                 {invoiceApplicantId && (
                   <td className="px-4">
-                    {x.salesUserId === invoiceApplicantId &&
+                    {(x.salesUserId === invoiceApplicantId || x.customerCollaboratorIds?.includes(invoiceApplicantId)) &&
                     x.status !== "CANCELLED" &&
                     [
                       "MANAGER_REJECTED",
@@ -121,7 +125,7 @@ export function OrderList({
                       >
                         修改订单
                       </Link>
-                    ) : x.salesUserId === invoiceApplicantId &&
+                    ) : (x.salesUserId === invoiceApplicantId || x.customerCollaboratorIds?.includes(invoiceApplicantId)) &&
                     x.approvalStatus === "APPROVED" &&
                     x.invoiceApplicationStatus === "PENDING" ? (
                       <Link
@@ -132,6 +136,15 @@ export function OrderList({
                       </Link>
                     ) : (
                       <span className="text-zinc-400">—</span>
+                    )}
+                    {x.salesUserId === invoiceApplicantId && (
+                      <div className="mt-2">
+                        <CustomerCollaboratorPicker
+                          customerId={x.customer.id}
+                          salesUsers={salesUsers.filter((item) => item.id !== invoiceApplicantId)}
+                          initialIds={x.customerCollaboratorIds || []}
+                        />
+                      </div>
                     )}
                   </td>
                 )}

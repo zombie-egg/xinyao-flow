@@ -82,7 +82,10 @@ export async function todoCounts(user: {
   if (role.startsWith("SALES"))
     counts["/invoice-applications"] = await db.order.count({
       where: {
-        salesUserId: user.id,
+        OR: [
+          { salesUserId: user.id },
+          { customer: { collaborators: { some: { userId: user.id } } } },
+        ],
         approvalStatus: "APPROVED",
         invoiceApplicationStatus: "PENDING",
       },

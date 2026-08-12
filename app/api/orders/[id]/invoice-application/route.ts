@@ -30,9 +30,9 @@ export async function POST(
       form = await req.formData(),
       p = schema.safeParse(Object.fromEntries(form.entries()));
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
-    const order = await db.order.findUnique({ where: { id } });
+    const order = await db.order.findUnique({ where: { id }, include: { customer: { include: { collaborators: { select: { userId: true } } } } } });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
-    if (!user.role.code.startsWith("SALES") || order.salesUserId !== user.id)
+    if (!user.role.code.startsWith("SALES") || (order.salesUserId !== user.id && !order.customer.collaborators.some((item) => item.userId === user.id)))
       throw new Error("FORBIDDEN");
     if (
       order.approvalStatus !== "APPROVED" ||

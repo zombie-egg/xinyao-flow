@@ -2,58 +2,103 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { Prisma } from "@prisma/client";
-import { z } from "zod";
+import { customerSchema } from "@/lib/customer-input";
 import {
   normalizeCustomerContact,
+  normalizeCustomerField,
   normalizeCustomerName,
   normalizeCustomerPhone,
 } from "@/lib/customer";
-const schema = z.object({
-  name: z.string().trim().min(2).max(100),
-  contact: z.string().trim().min(2).max(50),
-  phone: z.string().trim().min(5).max(30),
-  address: z.string().trim().max(300).optional(),
-  contactInfo: z.string().trim().max(300).optional(),
-  remark: z.string().trim().max(1000).optional(),
-});
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const u = await requirePermission("customer:manage"),
-      { id } = await params,
-      p = schema.safeParse(await req.json());
-    if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
-    const existing = await db.customer.findUnique({ where: { id } });
+    const user = await requirePermission("customer:manage");
+    const { id } = await params;
+    const parsed = customerSchema.safeParse(await req.json());
+    if (!parsed.success)
+      return fail(parsed.error.issues[0].message, "VALIDATION_ERROR");
+    const data = parsed.data;
+    const existing = await db.customer.findUnique({
+      where: { id },
+      include: { collaborators: { select: { userId: true } } },
+    });
     if (!existing) return fail("客户不存在", "NOT_FOUND", 404);
-    if (!u.role.code.startsWith("SALES") || existing.ownerId !== u.id)
-      throw new Error("FORBIDDEN");
-    const nameNormalized = normalizeCustomerName(p.data.name),
-      contactNormalized = normalizeCustomerContact(p.data.contact);
+    const managerEdit = user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER";
+    const selfEdit = user.role.code === "SALES_EMPLOYEE" && existing.ownerId === user.id;
+    if (!managerEdit && !selfEdit) throw new Error("FORBIDDEN");
+    const ownerId = managerEdit ? data.salesUserId || existing.ownerId : existing.ownerId;
+    const collaboratorIds = [...new Set(data.collaboratorIds)].filter((value) => value !== ownerId);
+    const salesCount = await db.user.count({
+      where: {
+        id: { in: [ownerId, ...collaboratorIds] },
+        status: "ACTIVE",
+        role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } },
+      },
+    });
+    if (salesCount !== new Set([ownerId, ...collaboratorIds]).size)
+      return fail("负责销售或协同销售不存在", "INVALID_SALES_USER");
+    const duplicate = await db.customer.findFirst({
+      where: {
+        id: { not: id },
+        OR: [
+          { nameNormalized: normalizeCustomerName(data.name) },
+          { contactNormalized: normalizeCustomerContact(data.contact) },
+          { phoneNormalized: normalizeCustomerPhone(data.phone) },
+          ...data.contactMethods.map((item) => ({
+            contactMethods: { some: { normalized: normalizeCustomerField(item.value) } },
+          })),
+        ],
+      },
+      select: { id: true },
+    });
+    if (duplicate)
+      return fail("已有客户包含相同名称、联系人或联系方式", "CUSTOMER_EXISTS", 409);
+    const customerData = {
+      name: data.name,
+      contact: data.contact,
+      phone: data.phone,
+      address: data.address,
+      contactInfo: data.contactInfo,
+      remark: data.remark,
+      businessLine: data.businessLine,
+      monitoringType: data.monitoringType,
+      industry: data.industry,
+      status: data.status,
+      nature: data.nature,
+    };
+    const contactMethods = data.contactMethods;
     const updated = await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('customer-create'))`;
-      const duplicate = await tx.customer.findFirst({
-        where: {
-          id: { not: id },
-          OR: [{ nameNormalized }, { contactNormalized }],
-        },
-        select: { id: true },
-      });
-      if (duplicate) throw new Error("CUSTOMER_EXISTS");
+      await tx.customerContactMethod.deleteMany({ where: { customerId: id } });
+      await tx.customerCollaborator.deleteMany({ where: { customerId: id } });
       return tx.customer.update({
         where: { id },
         data: {
-          ...p.data,
-          nameNormalized,
-          contactNormalized,
-          phoneNormalized: normalizeCustomerPhone(p.data.phone),
+          ...customerData,
+          ownerId,
+          nameNormalized: normalizeCustomerName(data.name),
+          contactNormalized: normalizeCustomerContact(data.contact),
+          phoneNormalized: normalizeCustomerPhone(data.phone),
+          contactMethods: {
+            create: [
+              { label: "电话", value: data.phone, normalized: normalizeCustomerField(data.phone) },
+              ...(data.contactInfo ? [{ label: "其他联系信息", value: data.contactInfo, normalized: normalizeCustomerField(data.contactInfo) }] : []),
+              ...contactMethods.map((item) => ({
+                label: item.label,
+                value: item.value,
+                normalized: normalizeCustomerField(item.value),
+              })),
+            ],
+          },
+          collaborators: { create: collaboratorIds.map((userId) => ({ userId })) },
         },
       });
     });
     await db.operationLog.create({
       data: {
-        userId: u.id,
+        userId: user.id,
         action: "UPDATE_CUSTOMER",
         module: "CUSTOMER",
         targetId: id,
@@ -61,11 +106,9 @@ export async function PATCH(
       },
     });
     return ok(updated);
-  } catch (e) {
-    if (e instanceof Error && e.message === "CUSTOMER_EXISTS")
-      return fail("已有客户：客户名称或联系人已存在", "CUSTOMER_EXISTS", 409);
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
       return fail("该客户已经存在，请勿重复创建", "CUSTOMER_EXISTS", 409);
-    return apiError(e);
+    return apiError(error);
   }
 }

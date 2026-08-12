@@ -82,6 +82,14 @@ enum ContractSigningStatus {
   PENDING_SIGNATURE
 }
 
+enum CustomerStatus {
+  POTENTIAL
+  INITIAL_CONTACT
+  FOLLOWING
+  WON
+  LOYAL
+}
+
 enum OrderStatus {
   DRAFT
   PENDING_SALES_MANAGER
@@ -195,6 +203,8 @@ model User {
   leaveRequests                   LeaveRequest[]
   leaveApprovals                  LeaveApproval[]
   customers                       Customer[]
+  customersCreated                Customer[]                   @relation("CustomerCreator")
+  customerCollaborations          CustomerCollaborator[]
   customerActivities              CustomerActivity[]
   contracts                       Contract[]
   contractsSigned                 Contract[]                   @relation("ContractSigner")
@@ -324,17 +334,50 @@ model Customer {
   address           String?
   contactInfo       String?
   remark            String?
+  businessLine      BusinessType         @default(ENVIRONMENTAL_MONITORING)
+  monitoringType    String?
+  industry          String               @default("")
+  status            CustomerStatus       @default(POTENTIAL)
+  nature            String?
   ownerId           String
+  createdById       String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   owner             User               @relation(fields: [ownerId], references: [id])
+  createdBy         User?              @relation("CustomerCreator", fields: [createdById], references: [id], onDelete: SetNull)
   contracts         Contract[]
   orders            Order[]
   activities        CustomerActivity[]
+  contactMethods    CustomerContactMethod[]
+  collaborators     CustomerCollaborator[]
 
   @@unique([nameNormalized, phoneNormalized])
   @@index([ownerId, name])
   @@index([contactNormalized])
+}
+
+model CustomerContactMethod {
+  id         String   @id @default(cuid())
+  customerId String
+  label      String?
+  value      String
+  normalized String
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([normalized])
+}
+
+model CustomerCollaborator {
+  customerId String
+  userId     String
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, userId])
+  @@index([userId])
 }
 
 model CustomerActivity {

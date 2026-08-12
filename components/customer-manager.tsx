@@ -1,17 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { businessLineText, customerStatusText, monitoringTypes } from "@/lib/customer-labels";
 
-type Activity = {
-  id: string;
-  content: string;
-  createdAt: Date | string;
-  author: { name: string };
-};
+type SalesUser = { id: string; name: string };
 type Customer = {
   id: string;
   name: string;
@@ -20,330 +17,209 @@ type Customer = {
   address: string | null;
   contactInfo: string | null;
   remark: string | null;
-  customerType: "WON" | "POTENTIAL";
+  businessLine: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH";
+  monitoringType: string | null;
+  industry: string;
+  status: string;
+  nature: string | null;
   owner: { id: string; name: string };
-  activities: Activity[];
+  collaborators: { user: SalesUser }[];
+  contactMethods: { id: string; label: string | null; value: string }[];
 };
+
+function CustomerFields({
+  customer,
+  salesUsers,
+  canAssignOwner,
+}: {
+  customer?: Customer;
+  salesUsers: SalesUser[];
+  canAssignOwner: boolean;
+}) {
+  const [businessLine, setBusinessLine] = useState(
+    customer?.businessLine || "ENVIRONMENTAL_MONITORING",
+  );
+  const [contacts, setContacts] = useState(
+    customer?.contactMethods
+      .filter((item) => item.label !== "电话" || item.value !== customer.phone)
+      .map((item) => ({ label: item.label || "其他", value: item.value })) || [],
+  );
+  const selectedCollaborators = new Set(
+    customer?.collaborators.map((item) => item.user.id) || [],
+  );
+  return (
+    <>
+      <label className="text-sm">
+        <span className="text-red-500">* </span>业务线
+        <select
+          name="businessLine"
+          value={businessLine}
+          onChange={(event) => setBusinessLine(event.target.value as typeof businessLine)}
+          className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
+        >
+          <option value="ENVIRONMENTAL_MONITORING">环境监测</option>
+          <option value="PUBLIC_HEALTH">公共卫生</option>
+        </select>
+      </label>
+      {businessLine === "ENVIRONMENTAL_MONITORING" && (
+        <label className="text-sm">
+          <span className="text-red-500">* </span>环境监测类型
+          <select
+            name="monitoringType"
+            required
+            defaultValue={customer?.monitoringType || "验收监测"}
+            className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
+          >
+            {monitoringTypes.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+      )}
+      <label className="text-sm">
+        <span className="text-red-500">* </span>客户名称
+        <Input name="name" defaultValue={customer?.name} className="mt-2" required />
+      </label>
+      <label className="text-sm">
+        <span className="text-red-500">* </span>客户行业
+        <Input name="industry" defaultValue={customer?.industry} className="mt-2" required />
+      </label>
+      <label className="text-sm">
+        <span className="text-red-500">* </span>联系人
+        <Input name="contact" defaultValue={customer?.contact} className="mt-2" required />
+      </label>
+      <label className="text-sm">
+        <span className="text-red-500">* </span>联系电话
+        <Input name="phone" defaultValue={customer?.phone} className="mt-2" required />
+      </label>
+      <label className="text-sm">
+        客户状态
+        <select name="status" defaultValue={customer?.status || "POTENTIAL"} className="mt-2 h-10 w-full rounded-lg border bg-white px-3">
+          {Object.entries(customerStatusText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </label>
+      <label className="text-sm">
+        客户性质
+        <Input name="nature" defaultValue={customer?.nature || "普通客户"} className="mt-2" />
+      </label>
+      <label className="text-sm md:col-span-2">
+        地址
+        <Input name="address" defaultValue={customer?.address || ""} className="mt-2" />
+      </label>
+      <label className="text-sm md:col-span-2">
+        其他联系信息
+        <Input name="contactInfo" defaultValue={customer?.contactInfo || ""} className="mt-2" />
+      </label>
+      <div className="space-y-2 md:col-span-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm">更多联系方式</span>
+          <Button type="button" variant="outline" className="h-8" onClick={() => setContacts([...contacts, { label: "其他", value: "" }])}>添加联系方式</Button>
+        </div>
+        {contacts.map((item, index) => (
+          <div key={index} className="grid grid-cols-[130px_1fr_auto] gap-2">
+            <Input value={item.label} onChange={(e) => setContacts(contacts.map((x, i) => i === index ? { ...x, label: e.target.value } : x))} placeholder="类型" />
+            <Input value={item.value} onChange={(e) => setContacts(contacts.map((x, i) => i === index ? { ...x, value: e.target.value } : x))} placeholder="联系方式" />
+            <Button type="button" variant="outline" onClick={() => setContacts(contacts.filter((_, i) => i !== index))}>删除</Button>
+          </div>
+        ))}
+        <input type="hidden" name="contactMethodsJson" value={JSON.stringify(contacts.filter((item) => item.value.trim()))} />
+      </div>
+      {canAssignOwner && (
+        <label className="text-sm">
+          负责销售
+          <select name="salesUserId" defaultValue={customer?.owner.id || ""} required className="mt-2 h-10 w-full rounded-lg border bg-white px-3">
+            <option value="" disabled>请选择负责销售</option>
+            {salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>
+      )}
+      <label className="text-sm">
+        协同销售
+        <select name="collaboratorIds" multiple defaultValue={[...selectedCollaborators]} className="mt-2 min-h-28 w-full rounded-lg border bg-white p-3">
+          {salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <span className="mt-1 block text-xs text-zinc-400">电脑可按住 Ctrl/Command 多选</span>
+      </label>
+      <label className="text-sm md:col-span-2">
+        备注
+        <Input name="remark" defaultValue={customer?.remark || ""} className="mt-2" />
+      </label>
+    </>
+  );
+}
 
 export function CustomerManager({
   items,
   canCreate,
   currentUserId,
   salesUsers,
+  canAssignOwner,
+  canManageAll,
   returnTo,
 }: {
   items: Customer[];
   canCreate: boolean;
   currentUserId: string;
-  salesUsers: { id: string; name: string }[];
+  salesUsers: SalesUser[];
+  canAssignOwner: boolean;
+  canManageAll: boolean;
   returnTo?: string;
 }) {
-  const router = useRouter(),
-    [show, setShow] = useState(Boolean(returnTo)),
-    [message, setMessage] = useState(""),
-    [openId, setOpenId] = useState<string | null>(null),
-    [editingId, setEditingId] = useState<string | null>(null),
-    [savingId, setSavingId] = useState<string | null>(null);
-  const editingCustomer = items.find((item) => item.id === editingId);
-  useEffect(() => {
-    const timer = window.setInterval(() => router.refresh(), 15000);
-    return () => window.clearInterval(timer);
-  }, [router]);
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const router = useRouter();
+  const [show, setShow] = useState(Boolean(returnTo));
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [duplicateQuery, setDuplicateQuery] = useState("");
+  const [duplicates, setDuplicates] = useState<Customer[]>([]);
+  const editing = items.find((item) => item.id === editingId);
+
+  function payload(form: HTMLFormElement) {
+    const data = new FormData(form);
+    const collaboratorIds = data.getAll("collaboratorIds").map(String);
+    const contactMethods = JSON.parse(String(data.get("contactMethodsJson") || "[]"));
+    return { ...Object.fromEntries(data.entries()), collaboratorIds, contactMethods };
+  }
+  async function save(event: React.FormEvent<HTMLFormElement>, id?: string) {
+    event.preventDefault();
     setMessage("");
-    try {
-      const f = new FormData(e.currentTarget),
-        res = await fetch("/api/customers", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(Object.fromEntries(f.entries())),
-        }),
-        body = await res.json();
-      if (!res.ok) {
-        setMessage(body.message || "保存失败，请检查填写内容");
-        return;
-      }
-      if (returnTo) {
-        router.push(returnTo);
-        router.refresh();
-        return;
-      }
-      setMessage("客户创建成功");
+    const res = await fetch(id ? `/api/customers/${id}` : "/api/customers", {
+      method: id ? "PATCH" : "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload(event.currentTarget)),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      if (body.code === "CUSTOMER_DUPLICATES") {
+        try { setDuplicates(JSON.parse(body.message)); } catch {}
+        setMessage("发现重复客户，请先核对下面的查重结果");
+      } else setMessage(body.message);
+      return;
+    }
+    if (returnTo) router.push(`${returnTo}${returnTo.includes("?") ? "&" : "?"}customerId=${body.data.id}`);
+    else {
       setShow(false);
+      setEditingId(null);
+      setMessage(id ? "客户信息已更新" : "客户创建成功");
       router.refresh();
-    } catch {
-      setMessage("网络或服务器响应异常，请稍后重试");
     }
   }
-  async function addActivity(
-    customerId: string,
-    e: React.FormEvent<HTMLFormElement>,
-  ) {
-    e.preventDefault();
-    setSavingId(customerId);
-    const form = e.currentTarget,
-      content = String(new FormData(form).get("content") || ""),
-      res = await fetch(`/api/customers/${customerId}/activities`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content }),
-      }),
-      body = await res.json();
-    setSavingId(null);
-    if (!res.ok) {
-      setMessage(body.message);
-      return;
-    }
-    form.reset();
-    setMessage("客户流水已添加");
-    router.refresh();
-  }
-  async function updateCustomer(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!editingCustomer) return;
-    setSavingId(editingCustomer.id);
-    setMessage("");
-    const form = e.currentTarget,
-      res = await fetch(`/api/customers/${editingCustomer.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
-      }),
-      body = await res.json();
-    setSavingId(null);
-    if (!res.ok) {
-      setMessage(body.message);
-      return;
-    }
-    setEditingId(null);
-    setMessage("客户信息已更新");
-    router.refresh();
+  async function checkDuplicates() {
+    const res = await fetch(`/api/customers/duplicates?q=${encodeURIComponent(duplicateQuery)}`);
+    const body = await res.json();
+    if (!res.ok) { setMessage(body.message); return; }
+    setDuplicates(body.data);
+    setMessage(body.data.length ? `发现 ${body.data.length} 条可能重复客户` : "未发现重复客户");
   }
   return (
     <>
-      {canCreate && (
-        <div className="mb-5 flex justify-end">
-          <Button onClick={() => setShow(!show)}>
-            {show ? "取消" : "新建客户"}
-          </Button>
-        </div>
-      )}
-      {show && (
-        <Card className="mb-5">
-          <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
-            <Input name="name" placeholder="客户名称" required />
-            <Input name="contact" placeholder="联系人" required />
-            <Input name="phone" placeholder="联系电话" required />
-            <Input
-              name="contactInfo"
-              placeholder="其他联系方式（微信、邮箱等）"
-            />
-            <Input
-              name="address"
-              placeholder="地址"
-              className="md:col-span-2"
-            />
-            <Input
-              name="remark"
-              placeholder="备注（不填写项目需求）"
-              className="md:col-span-2"
-            />
-            {salesUsers.length > 0 && (
-              <label className="text-sm md:col-span-2">
-                负责销售
-                <select
-                  name="salesUserId"
-                  required
-                  defaultValue=""
-                  className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
-                >
-                  <option value="" disabled>
-                    请选择负责销售
-                  </option>
-                  {salesUsers.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <div className="md:col-span-2">
-              <Button>保存客户</Button>
-              {message && (
-                <span className="ml-3 text-sm text-zinc-500">{message}</span>
-              )}
-            </div>
-          </form>
-        </Card>
-      )}
-      {editingCustomer && (
-        <Card className="mb-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="font-medium">编辑客户信息</h2>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setEditingId(null)}
-            >
-              取消
-            </Button>
-          </div>
-          <form onSubmit={updateCustomer} className="grid gap-4 md:grid-cols-2">
-            <Input name="name" defaultValue={editingCustomer.name} required />
-            <Input
-              name="contact"
-              defaultValue={editingCustomer.contact}
-              required
-            />
-            <Input name="phone" defaultValue={editingCustomer.phone} required />
-            <Input
-              name="contactInfo"
-              defaultValue={editingCustomer.contactInfo || ""}
-              placeholder="其他联系方式（微信、邮箱等）"
-            />
-            <Input
-              name="address"
-              defaultValue={editingCustomer.address || ""}
-              placeholder="地址"
-              className="md:col-span-2"
-            />
-            <Input
-              name="remark"
-              defaultValue={editingCustomer.remark || ""}
-              placeholder="备注（不填写项目需求）"
-              className="md:col-span-2"
-            />
-            <div className="md:col-span-2">
-              <Button disabled={savingId === editingCustomer.id}>
-                {savingId === editingCustomer.id ? "保存中…" : "保存修改"}
-              </Button>
-              {message && (
-                <span className="ml-3 text-sm text-zinc-500">{message}</span>
-              )}
-            </div>
-          </form>
-        </Card>
-      )}
-      <div className="overflow-x-auto rounded-xl border bg-white">
-        <table className="w-full min-w-[1150px] text-left text-sm">
-          <thead className="bg-zinc-50 text-zinc-500">
-            <tr>
-              {[
-                "客户名称",
-                "联系人",
-                "联系电话",
-                "其他联系方式",
-                "地址",
-                "负责销售",
-                "客户分类",
-                "客户流水",
-                "操作",
-              ].map((x) => (
-                <th key={x} className="whitespace-nowrap px-4 py-3 font-medium">
-                  {x}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((c) => (
-              <tr key={c.id} className="border-t align-top">
-                <td className="px-4 py-4 font-medium">{c.name}</td>
-                <td className="px-4 py-4">{c.contact}</td>
-                <td className="px-4 py-4">{c.phone}</td>
-                <td className="px-4 py-4">{c.contactInfo || "—"}</td>
-                <td className="px-4 py-4">{c.address || "—"}</td>
-                <td className="whitespace-nowrap px-4 py-4">{c.owner.name}</td>
-                <td className="whitespace-nowrap px-4 py-4">
-                  <Badge
-                    className={
-                      c.customerType === "WON"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : ""
-                    }
-                  >
-                    {c.customerType === "WON" ? "成交客户" : "潜在客户"}
-                  </Badge>
-                </td>
-                <td className="px-4 py-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 min-w-[5.5rem] px-3"
-                    onClick={() => setOpenId(openId === c.id ? null : c.id)}
-                  >
-                    {openId === c.id ? "收起流水" : "查看流水"}
-                  </Button>
-                  {openId === c.id && (
-                    <div className="mt-3 w-[360px] max-w-[70vw] space-y-3">
-                      {c.owner.id === currentUserId && (
-                        <form
-                          onSubmit={(e) => addActivity(c.id, e)}
-                          className="space-y-2"
-                        >
-                          <textarea
-                            name="content"
-                            required
-                            maxLength={5000}
-                            placeholder="记录跟进、沟通、回访等客户事件"
-                            className="min-h-24 w-full rounded-lg border p-3 text-sm"
-                          />
-                          <Button disabled={savingId === c.id}>
-                            {savingId === c.id ? "添加中…" : "添加流水"}
-                          </Button>
-                        </form>
-                      )}
-                      <div className="max-h-72 space-y-2 overflow-y-auto">
-                        {c.activities.length ? (
-                          c.activities.map((a) => (
-                            <div
-                              key={a.id}
-                              className="rounded-lg bg-zinc-50 p-3"
-                            >
-                              <p className="whitespace-pre-wrap leading-5">
-                                {a.content}
-                              </p>
-                              <p className="mt-2 text-xs text-zinc-400">
-                                {a.author.name} ·{" "}
-                                {new Date(a.createdAt).toLocaleString("zh-CN")}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-zinc-400">暂无客户流水</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-4">
-                  {c.owner.id === currentUserId ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-8 px-3"
-                      onClick={() => {
-                        setShow(false);
-                        setEditingId(c.id);
-                        setMessage("");
-                      }}
-                    >
-                      编辑
-                    </Button>
-                  ) : (
-                    <span className="text-zinc-400">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {message && !show && (
-        <p className="mt-3 text-sm text-zinc-500">{message}</p>
-      )}
+      {canCreate && <div className="mb-5 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => document.getElementById("duplicate-search")?.scrollIntoView({ behavior: "smooth" })}>客户查重</Button><Button onClick={() => setShow(!show)}>{show ? "取消" : "新建客户"}</Button></div>}
+      <Card id="duplicate-search" className="mb-5">
+        <h2 className="font-medium">全库客户查重</h2>
+        <div className="mt-3 flex gap-2"><Input value={duplicateQuery} onChange={(e) => setDuplicateQuery(e.target.value)} placeholder="输入客户名称、联系人、电话、微信、邮箱或其他联系信息" /><Button type="button" onClick={checkDuplicates}>查重</Button></div>
+        {duplicates.length > 0 && <div className="mt-4 grid gap-3 md:grid-cols-2">{duplicates.slice(0, 10).map((item) => <Link key={item.id} href={`/customers/${item.id}`} className="rounded-lg border p-3 text-sm hover:bg-zinc-50"><p className="font-medium">{item.name}</p><p className="mt-1 text-zinc-500">{item.contact} · {item.phone} · 负责销售：{item.owner.name}</p></Link>)}</div>}
+      </Card>
+      {show && <Card className="mb-5"><h2 className="mb-4 font-medium">新建客户</h2><form onSubmit={(e) => save(e)} className="grid gap-4 md:grid-cols-2"><CustomerFields salesUsers={salesUsers} canAssignOwner={canAssignOwner} /><div className="md:col-span-2"><Button>保存客户</Button></div></form></Card>}
+      {editing && <Card className="mb-5"><h2 className="mb-4 font-medium">编辑客户</h2><form onSubmit={(e) => save(e, editing.id)} className="grid gap-4 md:grid-cols-2"><CustomerFields customer={editing} salesUsers={salesUsers} canAssignOwner={canAssignOwner} /><div className="md:col-span-2 flex gap-2"><Button>保存修改</Button><Button type="button" variant="outline" onClick={() => setEditingId(null)}>取消</Button></div></form></Card>}
+      <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[1450px] whitespace-nowrap text-left text-sm"><thead className="bg-zinc-50 text-zinc-500"><tr>{["客户名称","业务线","行业","联系人","联系电话","负责销售","协同销售","客户状态","客户性质","操作"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead><tbody>{items.map((item) => { const canEdit = canManageAll || item.owner.id === currentUserId; return <tr key={item.id} className="border-t"><td className="px-4 py-4 font-medium">{item.name}</td><td className="px-4">{businessLineText[item.businessLine]}{item.monitoringType ? ` · ${item.monitoringType}` : ""}</td><td className="px-4">{item.industry}</td><td className="px-4">{item.contact}</td><td className="px-4">{item.phone}</td><td className="px-4">{item.owner.name}</td><td className="px-4">{item.collaborators.map((x) => x.user.name).join("、") || "—"}</td><td className="px-4"><Badge>{customerStatusText[item.status]}</Badge></td><td className="px-4">{item.nature || "—"}</td><td className="px-4"><div className="flex gap-2"><Link href={`/customers/${item.id}`} className="inline-flex h-8 items-center rounded-lg border px-3">查看明细</Link><Link href={`/orders/new?customerId=${item.id}`} className="inline-flex h-8 items-center rounded-lg bg-zinc-950 px-3 text-white">新建订单</Link>{canEdit && <Button type="button" variant="outline" className="h-8" onClick={() => setEditingId(item.id)}>编辑</Button>}</div></td></tr>})}</tbody></table></div>
+      {message && <p className="mt-3 text-sm text-zinc-500">{message}</p>}
     </>
   );
 }

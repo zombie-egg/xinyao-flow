@@ -136,16 +136,18 @@ export function NewOrderForm({
   employeeNumber,
   orderId,
   initial,
+  initialCustomerId,
 }: {
   customers: Customer[];
   staff: Staff[];
   employeeNumber: string | null;
   orderId?: string;
   initial?: OrderFormInitial;
+  initialCustomerId?: string;
 }) {
   const router = useRouter(),
     [customerId, setCustomerId] = useState(
-      initial?.customerId || customers[0]?.id || "",
+      initial?.customerId || initialCustomerId || customers[0]?.id || "",
     ),
     [customerSearch, setCustomerSearch] = useState(""),
     [message, setMessage] = useState(""),

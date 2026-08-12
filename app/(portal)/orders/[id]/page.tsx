@@ -29,7 +29,7 @@ export default async function OrderDetail({
     order = await db.order.findUnique({
       where: { id },
       include: {
-        customer: true,
+        customer: { include: { collaborators: { include: { user: true } } } },
         salesUser: true,
         technicalUser: true,
         financeUser: true,
@@ -54,7 +54,7 @@ export default async function OrderDetail({
     u.role.code.startsWith("FINANCE") ||
     (u.role.code === "TECH_MANAGER" && order.approvalStatus === "APPROVED") ||
     (u.role.code === "TECH_EMPLOYEE" && order.technicalUserId === u.id) ||
-    (u.role.code === "SALES_EMPLOYEE" && order.salesUserId === u.id) ||
+    (u.role.code === "SALES_EMPLOYEE" && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id))) ||
     (u.role.code === "SALES_MANAGER" &&
       order.salesUser.departmentId === u.departmentId);
   if (!canSee) throw new Error("FORBIDDEN");
@@ -73,7 +73,8 @@ export default async function OrderDetail({
       u.role.code.startsWith("FINANCE") &&
       order.approvalStatus === "PENDING_FINANCE",
     canAdmin =
-      u.role.code === "ADMIN" && order.approvalStatus === "PENDING_ADMIN";
+      u.role.code === "ADMIN" && order.approvalStatus === "PENDING_ADMIN",
+    canSalesOperate = u.role.code.startsWith("SALES") && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id));
   return (
     <>
       <PageHeader
@@ -274,16 +275,14 @@ export default async function OrderDetail({
         </Card>
         <Card id="invoice-application">
           <h2 className="font-medium">
-            {u.role.code.startsWith("SALES") &&
-            order.salesUserId === u.id &&
+            {canSalesOperate &&
             order.approvalStatus === "APPROVED" &&
             order.invoiceApplicationStatus === "PENDING"
               ? "申请开票"
               : "当前可执行操作"}
           </h2>
           <div className="mt-4">
-            {u.role.code.startsWith("SALES") &&
-              order.salesUserId === u.id &&
+            {canSalesOperate &&
               order.status !== "CANCELLED" &&
               ["MANAGER_REJECTED", "FINANCE_REJECTED", "ADMIN_REJECTED"].includes(
                 order.approvalStatus,
@@ -296,8 +295,7 @@ export default async function OrderDetail({
               order.approvalStatus === "APPROVED" && (
                 <TechnicalActions id={id} status={order.technicalStatus} />
               )}{" "}
-            {u.role.code.startsWith("SALES") &&
-              order.salesUserId === u.id &&
+            {canSalesOperate &&
               order.approvalStatus === "APPROVED" &&
               order.invoiceApplicationStatus === "PENDING" && (
                 <InvoiceApplicationForm id={id} />

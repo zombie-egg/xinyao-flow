@@ -13,6 +13,8 @@ import { businessOrderStatus, isOrderCompleted } from "../lib/order-workflow";
 import {chinaDateNumber,documentNumber} from '../lib/document-number';
 import {normalizeCustomerContact} from '../lib/customer';
 import { orderFormSchema } from "../lib/order-input";
+import { customerAccessWhere, customerBusinessAccess } from "../lib/customer-access";
+import { customerSchema } from "../lib/customer-input";
 describe("考勤距离", () => {
   it("同一坐标距离为 0", () =>
     expect(
@@ -159,5 +161,31 @@ describe("订单表单", () => {
       receivableCollaboratorUserId: "",
     });
     expect(result.success).toBe(true);
+  });
+});
+describe("客户权限与表单", () => {
+  it("普通销售只能查询自己负责或协同的客户", () => {
+    expect(customerAccessWhere({ id: "sales-1", role: { code: "SALES_EMPLOYEE" } })).toEqual({
+      OR: [
+        { ownerId: "sales-1" },
+        { collaborators: { some: { userId: "sales-1" } } },
+      ],
+    });
+  });
+  it("协同销售拥有客户业务操作权限", () => {
+    expect(customerBusinessAccess({ ownerId: "owner", collaborators: [{ userId: "collab" }] }, "collab")).toBe(true);
+  });
+  it("新客户扩展字段能通过校验", () => {
+    expect(customerSchema.safeParse({
+      name: "星尧环保",
+      contact: "张三",
+      phone: "13800000000",
+      contactMethods: [{ label: "微信", value: "xinyao-wechat" }],
+      businessLine: "ENVIRONMENTAL_MONITORING",
+      monitoringType: "验收监测",
+      industry: "环保公司",
+      status: "INITIAL_CONTACT",
+      collaboratorIds: ["sales-2"],
+    }).success).toBe(true);
   });
 });

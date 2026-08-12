@@ -20,7 +20,7 @@ export async function GET(
       order = await db.order.findUnique({
         where: { id },
         include: {
-          customer: true,
+          customer: { include: { collaborators: { select: { userId: true } } } },
           contract: true,
           salesUser: { select: { id: true, name: true, departmentId: true } },
           invoice: true,
@@ -34,7 +34,7 @@ export async function GET(
       u.role.code.startsWith("FINANCE") ||
       (u.role.code === "TECH_MANAGER" && order.approvalStatus === "APPROVED") ||
       (u.role.code === "TECH_EMPLOYEE" && order.technicalUserId === u.id) ||
-      (u.role.code === "SALES_EMPLOYEE" && order.salesUserId === u.id) ||
+      (u.role.code === "SALES_EMPLOYEE" && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id))) ||
       (u.role.code === "SALES_MANAGER" &&
         order.salesUser.departmentId === u.departmentId);
     if (!allowed) throw new Error("FORBIDDEN");
@@ -54,10 +54,11 @@ export async function PATCH(
     if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
     const order = await db.order.findUnique({
       where: { id },
-      include: { contract: true, receivable: true },
+      include: { contract: true, receivable: true, customer: { include: { collaborators: { select: { userId: true } } } } },
     });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
-    if (order.salesUserId !== user.id) throw new Error("FORBIDDEN");
+    const canOperate = order.salesUserId === user.id || order.customer.collaborators.some((item) => item.userId === user.id);
+    if (!canOperate) throw new Error("FORBIDDEN");
     if (
       !rejectedStatuses.includes(
         order.approvalStatus as (typeof rejectedStatuses)[number],
@@ -76,8 +77,10 @@ export async function PATCH(
     if (!parsed.success)
       return fail(parsed.error.issues[0].message, "VALIDATION_ERROR");
     const data = parsed.data;
-    const customer = await db.customer.findUnique({ where: { id: data.customerId } });
+    const customer = await db.customer.findUnique({ where: { id: data.customerId }, include: { collaborators: { select: { userId: true } } } });
     if (!customer) return fail("客户不存在", "CUSTOMER_NOT_FOUND", 404);
+    if (customer.ownerId !== user.id && !customer.collaborators.some((item) => item.userId === user.id) && user.role.code !== "SALES_MANAGER")
+      throw new Error("FORBIDDEN");
     const staffIds = [
       data.signerId,
       data.responsibleUserId,
@@ -133,10 +136,6 @@ export async function PATCH(
 
     const updated = await db.$transaction(
       async (tx) => {
-        await tx.customer.update({
-          where: { id: customer.id },
-          data: { ownerId: user.id },
-        });
         await tx.contract.update({
           where: { id: order.contractId },
           data: {
@@ -252,7 +251,9 @@ export async function DELETE(
     if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
     const order = await db.order.findUnique({ where: { id } });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
-    if (order.salesUserId !== user.id) throw new Error("FORBIDDEN");
+    const customer = await db.customer.findUnique({ where: { id: order.customerId }, include: { collaborators: { select: { userId: true } } } });
+    if (!customer || (order.salesUserId !== user.id && !customer.collaborators.some((item) => item.userId === user.id)))
+      throw new Error("FORBIDDEN");
     if (
       !rejectedStatuses.includes(
         order.approvalStatus as (typeof rejectedStatuses)[number],

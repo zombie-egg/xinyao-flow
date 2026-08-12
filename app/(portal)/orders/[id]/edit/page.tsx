@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page";
 import { NewOrderForm, type OrderFormInitial } from "@/components/new-order-form";
+import { customerAccessWhere } from "@/lib/customer-access";
 
 const rejectedStatuses = [
   "MANAGER_REJECTED",
@@ -21,9 +22,10 @@ export default async function EditRejectedOrder({
   const [order, customers, staff] = await Promise.all([
     db.order.findUnique({
       where: { id },
-      include: { contract: true, receivable: true },
+      include: { contract: true, receivable: true, customer: { include: { collaborators: { select: { userId: true } } } } },
     }),
     db.customer.findMany({
+      where: customerAccessWhere(user),
       select: {
         id: true,
         name: true,
@@ -47,7 +49,8 @@ export default async function EditRejectedOrder({
     }),
   ]);
   if (!order) notFound();
-  if (order.salesUserId !== user.id) throw new Error("FORBIDDEN");
+  if (order.salesUserId !== user.id && !order.customer.collaborators.some((item) => item.userId === user.id))
+    throw new Error("FORBIDDEN");
   if (!rejectedStatuses.includes(order.approvalStatus) || order.status === "CANCELLED")
     redirect(`/orders/${id}`);
 

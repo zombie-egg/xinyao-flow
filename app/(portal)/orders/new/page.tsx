@@ -2,10 +2,13 @@ import { requirePermission } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page";
 import { NewOrderForm } from "@/components/new-order-form";
-export default async function NewOrder() {
+import { customerAccessWhere } from "@/lib/customer-access";
+export default async function NewOrder({ searchParams }: { searchParams: Promise<{ customerId?: string }> }) {
   const user = await requirePermission("order:create");
+  const params = await searchParams;
   const [customers, staff] = await Promise.all([
     db.customer.findMany({
+      where: customerAccessWhere(user),
       select: {
         id: true,
         name: true,
@@ -38,6 +41,7 @@ export default async function NewOrder() {
         customers={customers}
         staff={staff}
         employeeNumber={user.employeeNumber}
+        initialCustomerId={params.customerId}
       />
     </>
   );

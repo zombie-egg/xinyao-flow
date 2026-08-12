@@ -3,11 +3,11 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader, Empty } from "@/components/page";
 import { OrderList } from "@/components/order-list";
-import { SearchForm } from "@/components/search-form";
+import { OrderFilters } from "@/components/order-filters";
 export default async function Orders({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const u = await requireUser(),
     params = await searchParams,
@@ -21,7 +21,7 @@ export default async function Orders({
     baseWhere = u.role.code === "SALES_MANAGER"
       ? { salesUser: { departmentId: u.departmentId } }
       : u.role.code === "SALES_EMPLOYEE"
-        ? { salesUserId: u.id }
+        ? { OR: [{ salesUserId: u.id }, { customer: { collaborators: { some: { userId: u.id } } } }] }
       : u.role.code === "TECH_MANAGER"
         ? { approvalStatus: "APPROVED" as const }
         : u.role.code === "TECH_EMPLOYEE"
@@ -67,13 +67,23 @@ export default async function Orders({
             },
           ],
         }
-      : {};
-  const items = await db.order.findMany({
-    where: { ...baseWhere, ...statusWhere, ...searchWhere },
-    include: { customer: true, salesUser: { select: { name: true } } },
+      : {},
+    extraWhere = {
+      AND: [
+        params.salesUserId ? { salesUserId: params.salesUserId } : {},
+        params.approvalStatus === "REJECTED" ? { approvalStatus: { in: ["MANAGER_REJECTED" as const,"FINANCE_REJECTED" as const,"ADMIN_REJECTED" as const] } } : params.approvalStatus ? { approvalStatus: params.approvalStatus as "PENDING_SALES_MANAGER"|"PENDING_FINANCE"|"PENDING_ADMIN"|"APPROVED" } : {},
+        params.invoiceStage === "TO_APPLY" ? { invoiceApplicationStatus: "PENDING" as const } : params.invoiceStage === "TO_INVOICE" ? { invoiceApplicationStatus: "COMPLETED" as const, invoiceStatus: "PENDING" as const } : params.invoiceStage === "INVOICED" ? { invoiceStatus: "COMPLETED" as const } : {},
+        params.paymentStage ? { paymentStatus: params.paymentStage as "PENDING"|"PARTIAL"|"COMPLETED" } : {},
+        params.amountMin || params.amountMax ? { amount: { ...(params.amountMin ? { gte: Number(params.amountMin) } : {}), ...(params.amountMax ? { lte: Number(params.amountMax) } : {}) } } : {},
+        params.createdFrom || params.createdTo ? { createdAt: { ...(params.createdFrom ? { gte: new Date(`${params.createdFrom}T00:00:00+08:00`) } : {}), ...(params.createdTo ? { lte: new Date(`${params.createdTo}T23:59:59+08:00`) } : {}) } } : {},
+      ],
+    };
+  const [items, salesUsers] = await Promise.all([db.order.findMany({
+    where: { AND: [baseWhere, statusWhere, searchWhere, extraWhere] },
+    include: { customer: { include: { collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
     take: 500,
-  });
+  }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
   return (
     <>
       <PageHeader
@@ -88,18 +98,14 @@ export default async function Orders({
         }
         description="点击订单号查看客户、合同、项目需求、财务信息和流程记录"
       />
-      <SearchForm
-        defaultValue={q}
-        placeholder="搜索订单号、订单名称、客户、联系人、电话或销售人员"
-        hidden={{ status: statusFilter }}
-        clearHref={`/orders?status=${statusFilter}`}
-      />
+      <OrderFilters params={params} salesUsers={salesUsers} />
       {items.length ? (
         <OrderList
-          items={items}
+          items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}
           statusFilter={statusFilter}
           query={q}
           invoiceApplicantId={u.role.code.startsWith("SALES") ? u.id : undefined}
+          salesUsers={salesUsers}
         />
       ) : (
         <>
