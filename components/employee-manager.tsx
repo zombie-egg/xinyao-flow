@@ -55,6 +55,25 @@ export function EmployeeManager({
     setEditing(null);
     router.refresh();
   }
+  async function toggleStatus(employee: Employee) {
+    const nextStatus = employee.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
+    if (!window.confirm(`确定要${nextStatus === "ACTIVE" ? "启用" : "禁用"}${employee.name}的账号吗？`)) return;
+    setSaving(true);
+    setMessage("");
+    const res = await fetch(`/api/users/${employee.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: nextStatus }),
+    });
+    const body = await res.json();
+    setSaving(false);
+    if (!res.ok) {
+      setMessage(body.message);
+      return;
+    }
+    setMessage(`${employee.name}的账号已${nextStatus === "ACTIVE" ? "启用" : "禁用"}`);
+    router.refresh();
+  }
   return (
     <div className="overflow-x-auto rounded-xl border bg-white">
       <table className="w-full min-w-[1280px] text-left text-sm">
@@ -86,18 +105,7 @@ export function EmployeeManager({
               <td className="px-4 py-4 font-medium">{x.name}</td>
               <td className="px-4 py-4">{x.username}</td>
               <td className="px-4 py-4">
-                {canEdit && editing === x.id ? (
-                  <Input
-                    form={`employee-${x.id}`}
-                    name="employeeNumber"
-                    defaultValue={x.employeeNumber || ""}
-                    placeholder="如 XYXS01"
-                    className="w-32"
-                    required
-                  />
-                ) : (
-                  x.employeeNumber || "—"
-                )}
+                {x.employeeNumber || "待系统生成"}
               </td>
               <td className="px-4 py-4">{x.department?.name || "管理员"}</td>
               <td className="px-4 py-4">{roleText[x.role.code]}</td>
@@ -154,15 +162,10 @@ export function EmployeeManager({
                   editing === x.id ? (
                     message || ""
                   ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setMessage("");
-                        setEditing(x.id);
-                      }}
-                    >
-                      编辑员工信息
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => { setMessage(""); setEditing(x.id); }}>编辑入职时间</Button>
+                      <Button variant={x.status === "ACTIVE" ? "outline" : "default"} disabled={saving} onClick={() => toggleStatus(x)}>{x.status === "ACTIVE" ? "禁用账号" : "启用账号"}</Button>
+                    </div>
                   )
                 ) : (
                   <span className="text-zinc-400">只读</span>

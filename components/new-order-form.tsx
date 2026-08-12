@@ -235,7 +235,7 @@ export function NewOrderForm({
       return;
     }
     if (!employeeNumber) {
-      setMessage("管理员尚未设置您的销售工号，暂时不能创建合同");
+      setMessage("系统尚未生成您的销售工号，请刷新页面或联系管理员");
       return;
     }
     setLoading(true);
@@ -287,7 +287,7 @@ export function NewOrderForm({
                   ? initial.contractNumber
                   : employeeNumber
                   ? `提交时自动生成：日期 + 流水号 + ${employeeNumber}`
-                  : "请先设置销售工号"
+                  : "等待系统生成销售工号"
               }
               readOnly
               className="mt-2 bg-zinc-50"

@@ -170,7 +170,7 @@ export async function PATCH(
   } catch (e) {
     if (e instanceof Error && e.message === "EMPLOYEE_NUMBER_REQUIRED")
       return fail(
-        "负责销售尚未设置工号，请先由管理员设置员工工号",
+        "负责销售尚未生成工号，请联系管理员检查账号信息",
         "EMPLOYEE_NUMBER_REQUIRED",
         409,
       );

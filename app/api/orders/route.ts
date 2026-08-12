@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     if (!canUseCustomer) throw new Error("FORBIDDEN");
     if (!customer.owner.employeeNumber)
       return fail(
-        "客户负责销售尚未设置工号，请先联系管理员设置",
+        "客户负责销售尚未生成工号，请联系管理员检查账号信息",
         "EMPLOYEE_NUMBER_REQUIRED",
         409,
       );
