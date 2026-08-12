@@ -7,15 +7,16 @@ export const customerStatusText: Record<string, string> = {
 };
 
 export const businessLineText: Record<string, string> = {
-  ENVIRONMENTAL_MONITORING: "环境监测",
+  ENVIRONMENTAL_MONITORING: "环境检测",
   PUBLIC_HEALTH: "公共卫生",
+  OCCUPATIONAL_HEALTH: "职业卫生",
 };
 
 export const monitoringTypes = [
-  "年度监测",
-  "验收监测",
+  "年度检测",
+  "验收检测",
   "ISO体系检测",
-  "水质监测",
+  "水质检测",
   "土壤检测/土调项目",
   "应急预案",
 ];

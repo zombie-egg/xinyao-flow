@@ -17,7 +17,7 @@ type Customer = {
   address: string | null;
   contactInfo: string | null;
   remark: string | null;
-  businessLine: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH";
+  businessLine: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH";
   monitoringType: string | null;
   industry: string;
   status: string;
@@ -59,17 +59,18 @@ function CustomerFields({
           onChange={(event) => setBusinessLine(event.target.value as typeof businessLine)}
           className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
         >
-          <option value="ENVIRONMENTAL_MONITORING">环境监测</option>
+          <option value="ENVIRONMENTAL_MONITORING">环境检测</option>
           <option value="PUBLIC_HEALTH">公共卫生</option>
+          <option value="OCCUPATIONAL_HEALTH">职业卫生</option>
         </select>
       </label>
       {businessLine === "ENVIRONMENTAL_MONITORING" && (
         <label className="text-sm">
-          <span className="text-red-500">* </span>环境监测类型
+          <span className="text-red-500">* </span>环境检测类型
           <select
             name="monitoringType"
             required
-            defaultValue={customer?.monitoringType || "验收监测"}
+            defaultValue={customer?.monitoringType || "验收检测"}
             className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
           >
             {monitoringTypes.map((item) => <option key={item}>{item}</option>)}

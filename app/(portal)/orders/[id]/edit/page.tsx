@@ -61,7 +61,7 @@ export default async function EditRejectedOrder({
   const initial: OrderFormInitial = {
     customerId: order.customerId,
     contractNumber: order.contract.contractNumber,
-    businessType: order.contract.businessType,
+    businessType: order.contract.businessType === "PUBLIC_HEALTH" ? "PUBLIC_HEALTH" : "ENVIRONMENTAL_MONITORING",
     productTotal: Number(order.contract.productTotal),
     amount: Number(order.contract.amount),
     technicalSupportFee: Number(order.contract.technicalSupportFee),

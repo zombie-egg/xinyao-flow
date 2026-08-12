@@ -75,6 +75,7 @@ enum ContractStatus {
 enum BusinessType {
   ENVIRONMENTAL_MONITORING
   PUBLIC_HEALTH
+  OCCUPATIONAL_HEALTH
 }
 
 enum ContractSigningStatus {

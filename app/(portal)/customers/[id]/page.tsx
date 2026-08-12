@@ -33,7 +33,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       <div className="grid gap-5 xl:grid-cols-2">
         <Card><h2 className="font-medium">客户资料</h2><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">{[
           ["业务线", businessLineText[customer.businessLine]],
-          ["环境监测类型", customer.monitoringType || "—"],
+          ["环境检测类型", customer.monitoringType || "—"],
           ["客户行业", customer.industry || "—"],
           ["客户状态", customerStatusText[customer.status]],
           ["客户性质", customer.nature || "—"],

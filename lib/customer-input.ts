@@ -22,8 +22,8 @@ export const customerSchema = z.object({
   address: optionalText(300),
   contactInfo: optionalText(300),
   remark: optionalText(1000),
-  businessLine: z.enum(["ENVIRONMENTAL_MONITORING", "PUBLIC_HEALTH"]),
-  monitoringType: z.string().trim().min(1, "请选择环境监测类型").max(100).optional(),
+  businessLine: z.enum(["ENVIRONMENTAL_MONITORING", "PUBLIC_HEALTH", "OCCUPATIONAL_HEALTH"]),
+  monitoringType: z.string().trim().min(1, "请选择环境检测类型").max(100).optional(),
   industry: z.string().trim().min(1, "请填写客户行业").max(100),
   status: z.enum(["POTENTIAL", "INITIAL_CONTACT", "FOLLOWING", "WON", "LOYAL"]),
   nature: optionalText(100),
@@ -31,7 +31,7 @@ export const customerSchema = z.object({
   collaboratorIds: z.array(z.string().min(1)).max(20).default([]),
 }).superRefine((value, ctx) => {
   if (value.businessLine === "ENVIRONMENTAL_MONITORING" && !value.monitoringType)
-    ctx.addIssue({ code: "custom", path: ["monitoringType"], message: "请选择环境监测类型" });
+    ctx.addIssue({ code: "custom", path: ["monitoringType"], message: "请选择环境检测类型" });
 });
 
 export type CustomerInput = z.infer<typeof customerSchema>;

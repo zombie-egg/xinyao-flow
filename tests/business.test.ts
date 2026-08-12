@@ -151,7 +151,7 @@ describe("订单表单", () => {
       signerId: "signer",
       responsibleUserId: "responsible",
       collaboratorId: "collaborator",
-      projectRequirements: "完成环境监测服务",
+      projectRequirements: "完成环境检测服务",
       remark: "",
       receivableAmount: "1900",
       receivableExpectedDate: "2026-09-01",
@@ -182,10 +182,43 @@ describe("客户权限与表单", () => {
       phone: "13800000000",
       contactMethods: [{ label: "微信", value: "xinyao-wechat" }],
       businessLine: "ENVIRONMENTAL_MONITORING",
-      monitoringType: "验收监测",
+      monitoringType: "验收检测",
       industry: "环保公司",
       status: "INITIAL_CONTACT",
       collaboratorIds: ["sales-2"],
     }).success).toBe(true);
+  });
+  it("客户可以选择职业卫生业务线", () => {
+    expect(customerSchema.safeParse({
+      name: "星尧职业卫生",
+      contact: "李四",
+      phone: "13900000000",
+      contactMethods: [],
+      businessLine: "OCCUPATIONAL_HEALTH",
+      industry: "职业卫生",
+      status: "POTENTIAL",
+      collaboratorIds: [],
+    }).success).toBe(true);
+  });
+  it("订单业务类型不能选择职业卫生", () => {
+    const base = {
+      customerId: "customer",
+      name: "职业卫生订单",
+      businessType: "OCCUPATIONAL_HEALTH",
+      productTotal: "1000",
+      amount: "1000",
+      technicalSupportFee: "0",
+      outsourcingFee: "0",
+      signingStatus: "SIGNED",
+      contractDate: "2026-08-13",
+      signerId: "signer",
+      responsibleUserId: "responsible",
+      collaboratorId: "finance",
+      projectRequirements: "职业卫生项目服务需求",
+      receivableAmount: "1000",
+      receivableExpectedDate: "2026-09-01",
+      receivableResponsibleUserId: "finance",
+    };
+    expect(orderFormSchema.safeParse(base).success).toBe(false);
   });
 });

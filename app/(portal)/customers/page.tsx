@@ -46,7 +46,7 @@ export default async function Customers({
       filters.status ? { status: filters.status as "POTENTIAL" | "INITIAL_CONTACT" | "FOLLOWING" | "WON" | "LOYAL" } : {},
       filters.nature ? { nature: { contains: filters.nature, mode: "insensitive" as const } } : {},
       filters.ownerId ? { OR: [{ ownerId: filters.ownerId }, { collaborators: { some: { userId: filters.ownerId } } }] } : {},
-      filters.businessLine ? { businessLine: filters.businessLine as "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" } : {},
+      filters.businessLine ? { businessLine: filters.businessLine as "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH" } : {},
       filters.industry ? { industry: { contains: filters.industry, mode: "insensitive" as const } } : {},
       filters.createdFrom || filters.createdTo ? { createdAt: { ...(filters.createdFrom ? { gte: new Date(`${filters.createdFrom}T00:00:00+08:00`) } : {}), ...(filters.createdTo ? { lte: new Date(`${filters.createdTo}T23:59:59+08:00`) } : {}) } } : {},
       filters.updatedFrom || filters.updatedTo ? { updatedAt: { ...(filters.updatedFrom ? { gte: new Date(`${filters.updatedFrom}T00:00:00+08:00`) } : {}), ...(filters.updatedTo ? { lte: new Date(`${filters.updatedTo}T23:59:59+08:00`) } : {}) } } : {},

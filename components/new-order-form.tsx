@@ -275,7 +275,7 @@ export function NewOrderForm({
               defaultValue="ENVIRONMENTAL_MONITORING"
               className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
             >
-              <option value="ENVIRONMENTAL_MONITORING">环境监测</option>
+              <option value="ENVIRONMENTAL_MONITORING">环境检测</option>
               <option value="PUBLIC_HEALTH">公共卫生</option>
             </select>
           </label>
