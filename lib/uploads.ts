@@ -2,7 +2,7 @@ import crypto from 'node:crypto';import path from 'node:path';import {mkdir,writ
 
 export const uploadRoot=process.env.UPLOAD_DIR||path.join(process.cwd(),'public','uploads');
 
-export async function saveUpload(file:File,{prefix,subdirectory='',types,maxBytes,optimizeImage=false}:{prefix:string;subdirectory?:string;types:Map<string,string>;maxBytes:number;optimizeImage?:boolean}){
+export async function saveUpload(file:File,{prefix,subdirectory='',types,maxBytes,optimizeImage=true}:{prefix:string;subdirectory?:string;types:Map<string,string>;maxBytes:number;optimizeImage?:boolean}){
   if(!types.has(file.type))throw new Error('INVALID_FILE_TYPE');
   if(file.size>maxBytes)throw new Error('FILE_TOO_LARGE');
   const directory=path.join(uploadRoot,subdirectory);await mkdir(directory,{recursive:true});
