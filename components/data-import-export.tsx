@@ -15,6 +15,7 @@ type Result = {
 export function DataImportExport({ entity, canImport }: { entity: Entity; canImport: boolean }) {
   const [open, setOpen] = useState(false);
   const [useAi, setUseAi] = useState(true);
+  const [publicPool, setPublicPool] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -22,7 +23,7 @@ export function DataImportExport({ entity, canImport }: { entity: Entity; canImp
   async function preview() {
     if (!file) return setMessage("请选择要导入的文件");
     setLoading(true); setMessage(""); setResult(null);
-    const form = new FormData(); form.set("entity", entity); form.set("useAi", String(useAi)); form.set("file", file);
+    const form = new FormData(); form.set("entity", entity); form.set("useAi", String(useAi)); form.set("publicPool", String(entity === "customers" && publicPool)); form.set("file", file);
     const response = await fetch("/api/import/preview", { method: "POST", body: form });
     const body = await response.json(); setLoading(false);
     if (!response.ok) return setMessage(body.message || "无法解析导入文件");
@@ -38,6 +39,7 @@ export function DataImportExport({ entity, canImport }: { entity: Entity; canImp
       <div className="flex flex-wrap items-center gap-3">
         <input type="file" accept=".xlsx,.xls,.csv,.json" onChange={(event) => setFile(event.target.files?.[0] || null)} className="max-w-full text-sm" />
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={useAi} onChange={(event) => setUseAi(event.target.checked)} />使用 DeepSeek AI 辅助字段对应</label>
+        {entity === "customers" && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={publicPool} onChange={(event) => setPublicPool(event.target.checked)} />整份文件作为公海客户</label>}
         <Button type="button" onClick={preview} disabled={loading}>{loading ? "正在分析…" : "生成导入预览"}</Button>
       </div>
       {message && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{message}</p>}
