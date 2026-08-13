@@ -5,6 +5,7 @@ import { CustomerManager } from "@/components/customer-manager";
 import { canViewAllCustomers, customerAccessWhere } from "@/lib/customer-access";
 import { CustomerFilters } from "@/components/customer-filters";
 import { DataImportExport } from "@/components/data-import-export";
+import { Pagination } from "@/components/pagination";
 
 export default async function Customers({
   searchParams,
@@ -13,6 +14,8 @@ export default async function Customers({
 }) {
   const user = await requirePermission("customer:view");
   const params = await searchParams;
+  const pageSize = 50;
+  const page = Math.max(1, Number(params.page) || 1);
   const q = params.q?.trim() || "";
   const access = customerAccessWhere(user);
   const now = new Date();
@@ -55,7 +58,7 @@ export default async function Customers({
       filters.updatedFrom || filters.updatedTo ? { updatedAt: { ...(filters.updatedFrom ? { gte: new Date(`${filters.updatedFrom}T00:00:00+08:00`) } : {}), ...(filters.updatedTo ? { lte: new Date(`${filters.updatedTo}T23:59:59+08:00`) } : {}) } } : {},
     ],
   };
-  const [items, salesUsers] = await Promise.all([
+  const [items, total, salesUsers] = await Promise.all([
     db.customer.findMany({
       where,
       include: {
@@ -64,8 +67,10 @@ export default async function Customers({
         contactMethods: true,
       },
       orderBy: { updatedAt: "desc" },
-      take: 500,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
+    db.customer.count({ where }),
     db.user.findMany({
       where: { status: "ACTIVE", role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } } },
       select: { id: true, name: true },
@@ -91,6 +96,7 @@ export default async function Customers({
         returnTo={params.return}
       />
       {!items.length && <Empty text={q ? "没有匹配的客户" : "暂无客户"} />}
+      <Pagination pathname="/customers" params={params} page={page} pageSize={pageSize} total={total} />
     </>
   );
 }

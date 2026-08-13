@@ -5,6 +5,7 @@ import { PageHeader, Empty } from "@/components/page";
 import { OrderList } from "@/components/order-list";
 import { OrderFilters } from "@/components/order-filters";
 import { DataImportExport } from "@/components/data-import-export";
+import { Pagination } from "@/components/pagination";
 export default async function Orders({
   searchParams,
 }: {
@@ -12,6 +13,8 @@ export default async function Orders({
 }) {
   const u = await requireUser(),
     params = await searchParams,
+    pageSize = 50,
+    page = Math.max(1, Number(params.page) || 1),
     q = params.q?.trim() || "",
     statusFilter =
       params.status === "COMPLETED"
@@ -85,12 +88,14 @@ export default async function Orders({
         params.createdFrom || params.createdTo ? { createdAt: { ...(params.createdFrom ? { gte: new Date(`${params.createdFrom}T00:00:00+08:00`) } : {}), ...(params.createdTo ? { lte: new Date(`${params.createdTo}T23:59:59+08:00`) } : {}) } } : {},
       ],
     };
-  const [items, salesUsers] = await Promise.all([db.order.findMany({
-    where: { AND: [baseWhere, statusWhere, searchWhere, extraWhere] },
+  const where = { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };
+  const [items, total, salesUsers] = await Promise.all([db.order.findMany({
+    where,
     include: { customer: { include: { collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
-    take: 500,
-  }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  }), db.order.count({ where }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
   return (
     <>
       <PageHeader
@@ -137,6 +142,7 @@ export default async function Orders({
           <Empty text={q ? "没有匹配的订单" : "暂无订单"} />
         </>
       )}
+      <Pagination pathname="/orders" params={params} page={page} pageSize={pageSize} total={total} />
     </>
   );
 }
