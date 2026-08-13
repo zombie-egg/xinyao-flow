@@ -35,15 +35,15 @@ export function OrderFilters({ params, salesUsers }: { params: Record<string, st
       {open && <form className="rounded-xl border bg-white p-4">
         <input type="hidden" name="status" value={status} />
         {params.quick && <input type="hidden" name="quick" value={params.quick} />}
-        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid items-end gap-3 md:grid-cols-3 xl:grid-cols-5">
           <Input name="q" defaultValue={params.q} placeholder="搜索订单号、名称、客户或联系人" />
           <select name="salesUserId" defaultValue={params.salesUserId || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部销售人员</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
           <select name="approvalStatus" defaultValue={params.approvalStatus || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部审核状态</option><option value="PENDING_SALES_MANAGER">等待销售经理</option><option value="PENDING_FINANCE">等待财务</option><option value="PENDING_ADMIN">等待管理员</option><option value="APPROVED">审核通过</option><option value="REJECTED">审核拒绝</option></select>
           <select name="contractStatus" defaultValue={params.contractStatus || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部合同状态</option><option value="SIGNED">已签订</option><option value="PENDING_SIGNATURE">待签订</option></select>
           <select name="invoiceStage" defaultValue={params.invoiceStage || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部开票阶段</option><option value="TO_APPLY">待申请开票</option><option value="TO_INVOICE">待开发票</option><option value="INVOICED">已开发票</option></select>
-          <select name="paymentStage" defaultValue={params.paymentStage || ""} className="h-10 rounded-lg border bg-white px-3 text-sm xl:mt-5"><option value="">全部回款状态</option><option value="PENDING">未回款</option><option value="PARTIAL">部分回款</option><option value="COMPLETED">已回款</option></select>
-          <Input name="amountMin" type="number" step="0.01" defaultValue={params.amountMin} placeholder="最低金额" className="xl:mt-5" />
-          <Input name="amountMax" type="number" step="0.01" defaultValue={params.amountMax} placeholder="最高金额" className="xl:mt-5" />
+          <select name="paymentStage" defaultValue={params.paymentStage || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部回款状态</option><option value="PENDING">未回款</option><option value="PARTIAL">部分回款</option><option value="COMPLETED">已回款</option></select>
+          <Input name="amountMin" type="number" step="0.01" defaultValue={params.amountMin} placeholder="最低金额" />
+          <Input name="amountMax" type="number" step="0.01" defaultValue={params.amountMax} placeholder="最高金额" />
           <label className="text-xs text-zinc-400"><span className="mb-1 block">订单创建时间（开始）</span><Input name="createdFrom" type="date" defaultValue={params.createdFrom} aria-label="订单创建时间开始" /></label>
           <label className="text-xs text-zinc-400"><span className="mb-1 block">订单创建时间（结束）</span><Input name="createdTo" type="date" defaultValue={params.createdTo} aria-label="订单创建时间结束" /></label>
         </div>
