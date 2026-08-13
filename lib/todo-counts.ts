@@ -6,54 +6,57 @@ export async function todoCounts(user: {
   departmentId: string | null;
   role: { code: RoleCode };
 }) {
-  const counts: Record<string, number> = {};
+  const jobs: Array<Promise<[string, number]>> = [];
+  const add = (path: string, query: Promise<number>) => {
+    jobs.push(query.then((count) => [path, count]));
+  };
   const role = user.role.code;
   if (role === "SALES_MANAGER")
-    counts["/reviews"] = await db.order.count({
+    add("/reviews", db.order.count({
       where: {
         approvalStatus: "PENDING_SALES_MANAGER",
         salesUser: { departmentId: user.departmentId },
       },
-    });
+    }));
   else if (role.startsWith("FINANCE"))
-    counts["/reviews"] = await db.order.count({
+    add("/reviews", db.order.count({
       where: { approvalStatus: "PENDING_FINANCE" },
-    });
+    }));
   else if (role === "ADMIN")
-    counts["/reviews"] = await db.order.count({
+    add("/reviews", db.order.count({
       where: { approvalStatus: "PENDING_ADMIN" },
-    });
+    }));
   if (role === "ADMIN") {
-    counts["/approvals"] = await db.leaveRequest.count({
+    add("/approvals", db.leaveRequest.count({
       where: { status: "PENDING_ADMIN" },
-    });
-    counts["/attendance-processing"] = await db.attendanceException.count({
+    }));
+    add("/attendance-processing", db.attendanceException.count({
       where: { status: "PENDING_ADMIN", disposition: "PENDING" },
-    });
+    }));
   } else if (role === "SALES_MANAGER" || role === "TECH_MANAGER") {
-    counts["/approvals"] = await db.leaveRequest.count({
+    add("/approvals", db.leaveRequest.count({
       where: {
         status: "PENDING_MANAGER",
         user: { departmentId: user.departmentId },
       },
-    });
-    counts["/attendance-processing"] = await db.attendanceException.count({
+    }));
+    add("/attendance-processing", db.attendanceException.count({
       where: {
         status: "PENDING_MANAGER",
         disposition: "PENDING",
         attendance: { user: { departmentId: user.departmentId } },
       },
-    });
+    }));
   }
   if (role.startsWith("FINANCE")) {
-    counts["/finance/invoices"] = await db.order.count({
+    add("/finance/invoices", db.order.count({
       where: {
         approvalStatus: "APPROVED",
         invoiceApplicationStatus: "COMPLETED",
         invoiceStatus: "PENDING",
       },
-    });
-    counts["/finance/payments"] = await db.order.count({
+    }));
+    add("/finance/payments", db.order.count({
       where: {
         approvalStatus: "APPROVED",
         paymentStatus: { not: "COMPLETED" },
@@ -65,22 +68,22 @@ export async function todoCounts(user: {
           },
         ],
       },
-    });
+    }));
   }
   if (role === "TECH_MANAGER")
-    counts["/tasks"] = await db.order.count({
+    add("/tasks", db.order.count({
       where: { approvalStatus: "APPROVED", technicalUserId: null },
-    });
+    }));
   else if (role === "TECH_EMPLOYEE")
-    counts["/tasks"] = await db.order.count({
+    add("/tasks", db.order.count({
       where: {
         approvalStatus: "APPROVED",
         technicalUserId: user.id,
         technicalStatus: { in: ["PENDING", "PROCESSING"] },
       },
-    });
+    }));
   if (role.startsWith("SALES"))
-    counts["/invoice-applications"] = await db.order.count({
+    add("/invoice-applications", db.order.count({
       where: {
         OR: [
           { salesUserId: user.id },
@@ -89,6 +92,6 @@ export async function todoCounts(user: {
         approvalStatus: "APPROVED",
         invoiceApplicationStatus: "PENDING",
       },
-    });
-  return counts;
+    }));
+  return Object.fromEntries(await Promise.all(jobs));
 }

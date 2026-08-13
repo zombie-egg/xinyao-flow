@@ -134,14 +134,19 @@ export function Sidebar({
     items = menus[user.role as keyof typeof menus] || menus.ADMIN;
   useEffect(() => {
     const update = async () => {
-      const res = await fetch("/api/todos");
+      if (document.visibilityState !== "visible") return;
+      const res = await fetch("/api/todos", { cache: "no-store" });
       if (res.ok) {
         const body = await res.json();
         setTodoBadges(body.data);
       }
     };
-    const timer = window.setInterval(update, 15000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(update, 60000);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
+    };
   }, []);
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
