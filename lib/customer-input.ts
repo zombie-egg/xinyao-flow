@@ -27,6 +27,7 @@ export const customerSchema = z.object({
   industry: z.string().trim().min(1, "请填写客户行业").max(100),
   status: z.enum(["POTENTIAL", "INITIAL_CONTACT", "FOLLOWING", "WON", "LOYAL"]),
   nature: optionalText(100),
+  customerScope: z.enum(["TRACKED", "PUBLIC"]).default("TRACKED"),
   salesUserId: optionalText(100),
   collaboratorIds: z.array(z.string().min(1)).max(20).default([]),
 }).superRefine((value, ctx) => {

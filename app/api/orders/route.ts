@@ -79,17 +79,21 @@ export async function POST(req: Request) {
     });
     if (!customer)
       return fail("客户不存在，请先创建客户", "CUSTOMER_NOT_FOUND", 404);
+    if (customer.isPublicPool || !customer.ownerId || !customer.owner)
+      return fail("公海客户需要先认领并设置负责销售", "PUBLIC_CUSTOMER_MUST_BE_CLAIMED", 409);
+    const customerOwnerId = customer.ownerId;
+    const customerOwner = customer.owner;
     const canUseCustomer =
       customer.ownerId === u.id ||
       customer.collaborators.some((item) => item.userId === u.id);
     if (!canUseCustomer) throw new Error("FORBIDDEN");
-    if (!customer.owner.employeeNumber)
+    if (!customerOwner.employeeNumber)
       return fail(
         "客户负责销售尚未生成工号，请联系管理员检查账号信息",
         "EMPLOYEE_NUMBER_REQUIRED",
         409,
       );
-    const ownerEmployeeNumber = customer.owner.employeeNumber;
+    const ownerEmployeeNumber = customerOwner.employeeNumber;
     const staffIds = [
         p.data.signerId,
         p.data.responsibleUserId,
@@ -124,7 +128,7 @@ export async function POST(req: Request) {
       maxBytes: 10 * 1024 * 1024,
       optimizeImage: true,
     });
-    const managerCreated = customer.owner.role.code === "SALES_MANAGER",
+    const managerCreated = customerOwner.role.code === "SALES_MANAGER",
       approvalStatus = managerCreated
         ? "PENDING_FINANCE"
         : "PENDING_SALES_MANAGER",
@@ -153,7 +157,7 @@ export async function POST(req: Request) {
           businessType: p.data.businessType,
           signingStatus: p.data.signingStatus,
           customerId: customer.id,
-          salesUserId: customer.ownerId,
+          salesUserId: customerOwnerId,
           signerId: p.data.signerId,
           responsibleUserId: p.data.responsibleUserId,
           collaboratorId: p.data.collaboratorId,
@@ -180,7 +184,7 @@ export async function POST(req: Request) {
         data: {
           contractId: contract.id,
           customerId: customer.id,
-          salesUserId: customer.ownerId,
+          salesUserId: customerOwnerId,
           name: p.data.name,
           contact: customer.contact,
           phone: customer.phone,
@@ -223,7 +227,7 @@ export async function POST(req: Request) {
         : await tx.user.findMany({
             where: {
               role: { code: "SALES_MANAGER" },
-              departmentId: customer.owner.departmentId,
+              departmentId: customerOwner.departmentId,
               status: "ACTIVE",
             },
           });

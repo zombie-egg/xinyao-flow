@@ -105,18 +105,21 @@ export async function POST(req: Request) {
     if (!parsed.success)
       return fail(parsed.error.issues[0].message, "VALIDATION_ERROR");
     const data = parsed.data;
-    const ownerId = user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER"
-      ? data.salesUserId || user.id
-      : user.id;
-    const sales = await db.user.findFirst({
+    const isPublicPool = data.customerScope === "PUBLIC";
+    const ownerId = isPublicPool
+      ? null
+      : user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER"
+        ? data.salesUserId || user.id
+        : user.id;
+    const sales = ownerId ? await db.user.findFirst({
       where: {
         id: ownerId,
         status: "ACTIVE",
         role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } },
       },
-    });
-    if (!sales) return fail("负责销售不存在或已停用", "INVALID_SALES_USER");
-    const collaboratorIds = [...new Set(data.collaboratorIds)].filter((id) => id !== ownerId);
+    }) : null;
+    if (!isPublicPool && !sales) return fail("负责销售不存在或已停用", "INVALID_SALES_USER");
+    const collaboratorIds = isPublicPool ? [] : [...new Set(data.collaboratorIds)].filter((id) => id !== ownerId);
     if (collaboratorIds.length) {
       const count = await db.user.count({
         where: {
@@ -142,7 +145,7 @@ export async function POST(req: Request) {
       businessLine: data.businessLine,
       monitoringType: data.monitoringType,
       industry: data.industry,
-      status: data.status,
+      status: isPublicPool ? "POTENTIAL" as const : data.status,
       nature: data.nature,
     };
     const contactMethods = data.contactMethods;
@@ -157,6 +160,7 @@ export async function POST(req: Request) {
           contactNormalized: normalizeCustomerContact(data.contact),
           phoneNormalized: normalizeCustomerPhone(data.phone),
           ownerId,
+          isPublicPool,
           createdById: user.id,
           contactMethods: {
             create: [
@@ -179,7 +183,7 @@ export async function POST(req: Request) {
         action: "CREATE_CUSTOMER",
         module: "CUSTOMER",
         targetId: customer.id,
-        description: `创建客户：${customer.name}，负责销售：${sales.name}`,
+        description: isPublicPool ? `创建公海客户：${customer.name}` : `创建客户：${customer.name}，负责销售：${sales?.name}`,
       },
     });
     return ok(customer, 201);

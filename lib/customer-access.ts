@@ -13,6 +13,7 @@ export function customerAccessWhere(user: {
     : user.role.code === "SALES_EMPLOYEE"
       ? {
           OR: [
+            { isPublicPool: true },
             { ownerId: user.id },
             { collaborators: { some: { userId: user.id } } },
           ],
@@ -21,11 +22,13 @@ export function customerAccessWhere(user: {
 }
 
 export function customerBusinessAccess(customer: {
-  ownerId: string;
+  ownerId: string | null;
+  isPublicPool?: boolean;
   collaborators: { userId: string }[];
 }, userId: string) {
   return (
-    customer.ownerId === userId ||
+    !customer.isPublicPool && (customer.ownerId === userId ||
     customer.collaborators.some((item) => item.userId === userId)
+    )
   );
 }

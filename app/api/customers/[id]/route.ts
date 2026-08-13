@@ -26,6 +26,8 @@ export async function PATCH(
       include: { collaborators: { select: { userId: true } } },
     });
     if (!existing) return fail("客户不存在", "NOT_FOUND", 404);
+    if (existing.isPublicPool || !existing.ownerId)
+      return fail("公海客户请先认领后再编辑", "PUBLIC_CUSTOMER_MUST_BE_CLAIMED", 409);
     const canEdit = user.role.code.startsWith("SALES") && (
       existing.ownerId === user.id ||
       existing.collaborators.some((item) => item.userId === user.id)

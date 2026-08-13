@@ -7,6 +7,7 @@ import { Input } from "./ui/input";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { businessLineText, customerStatusText, monitoringTypes } from "@/lib/customer-labels";
+import { PublicCustomerClaim } from "./public-customer-claim";
 
 type SalesUser = { id: string; name: string };
 type Customer = {
@@ -22,7 +23,8 @@ type Customer = {
   industry: string;
   status: string;
   nature: string | null;
-  owner: { id: string; name: string };
+  owner: { id: string; name: string } | null;
+  isPublicPool: boolean;
   collaborators: { user: SalesUser }[];
   contactMethods: { id: string; label: string | null; value: string }[];
 };
@@ -32,11 +34,13 @@ function CustomerFields({
   salesUsers,
   canAssignOwner,
   canManageCollaborators = true,
+  showScope = false,
 }: {
   customer?: Customer;
   salesUsers: SalesUser[];
   canAssignOwner: boolean;
   canManageCollaborators?: boolean;
+  showScope?: boolean;
 }) {
   const [businessLine, setBusinessLine] = useState(
     customer?.businessLine || "ENVIRONMENTAL_MONITORING",
@@ -49,8 +53,12 @@ function CustomerFields({
   const selectedCollaborators = new Set(
     customer?.collaborators.map((item) => item.user.id) || [],
   );
+  const [customerScope, setCustomerScope] = useState<"TRACKED" | "PUBLIC">(
+    customer?.isPublicPool ? "PUBLIC" : "TRACKED",
+  );
   return (
     <>
+      {showScope && <label className="text-sm md:col-span-2"><span className="text-red-500">* </span>客户归属<select name="customerScope" value={customerScope} onChange={(event) => setCustomerScope(event.target.value as "TRACKED" | "PUBLIC")} className="mt-2 h-10 w-full rounded-lg border bg-white px-3"><option value="TRACKED">跟进客户</option><option value="PUBLIC">公海客户</option></select><span className="mt-1 block text-xs text-zinc-400">公海客户无需负责人，所有销售、财务和管理员均可查看。</span></label>}
       <label className="text-sm">
         <span className="text-red-500">* </span>业务线
         <select
@@ -125,22 +133,22 @@ function CustomerFields({
         ))}
         <input type="hidden" name="contactMethodsJson" value={JSON.stringify(contacts.filter((item) => item.value.trim()))} />
       </div>
-      {canAssignOwner && (
+      {canAssignOwner && customerScope === "TRACKED" && (
         <label className="text-sm">
           负责销售
-          <select name="salesUserId" defaultValue={customer?.owner.id || ""} required className="mt-2 h-10 w-full rounded-lg border bg-white px-3">
+          <select name="salesUserId" defaultValue={customer?.owner?.id || ""} required className="mt-2 h-10 w-full rounded-lg border bg-white px-3">
             <option value="" disabled>请选择负责销售</option>
             {salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         </label>
       )}
-      {canManageCollaborators ? <label className="text-sm">
+      {customerScope === "TRACKED" && (canManageCollaborators ? <label className="text-sm">
         客户协同跟进人
         <select name="collaboratorIds" multiple defaultValue={[...selectedCollaborators]} className="mt-2 min-h-28 w-full rounded-lg border bg-white p-3">
           {salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
         <span className="mt-1 block text-xs text-zinc-400">非必填；未选择时该客户没有协同跟进人。电脑可按住 Ctrl/Command 多选</span>
-      </label> : <div className="text-sm"><span className="block">客户协同跟进人</span><div className="mt-2 min-h-10 rounded-lg border bg-zinc-50 px-3 py-2 text-zinc-600">{customer?.collaborators.map((item) => item.user.name).join("、") || "无"}</div></div>}
+      </label> : <div className="text-sm"><span className="block">客户协同跟进人</span><div className="mt-2 min-h-10 rounded-lg border bg-zinc-50 px-3 py-2 text-zinc-600">{customer?.collaborators.map((item) => item.user.name).join("、") || "无"}</div></div>)}
       <label className="text-sm md:col-span-2">
         备注
         <Input name="remark" defaultValue={customer?.remark || ""} className="mt-2" />
@@ -154,12 +162,14 @@ export function CustomerManager({
   currentUserId,
   salesUsers,
   canAssignOwner,
+  canClaimPublic,
   returnTo,
 }: {
   items: Customer[];
   currentUserId: string;
   salesUsers: SalesUser[];
   canAssignOwner: boolean;
+  canClaimPublic: boolean;
   returnTo?: string;
 }) {
   const router = useRouter();
@@ -233,11 +243,11 @@ export function CustomerManager({
       {showDuplicates && <Card id="duplicate-search" className="mb-5">
         <h2 className="font-medium">全库客户查重</h2>
         <div className="mt-3 flex gap-2"><Input value={duplicateQuery} onChange={(e) => setDuplicateQuery(e.target.value)} placeholder="输入客户名称、联系人、电话、微信、邮箱或其他联系信息" /><Button type="button" onClick={checkDuplicates}>查重</Button></div>
-        {duplicates.length > 0 && <div className="mt-4 grid gap-3 md:grid-cols-2">{duplicates.slice(0, 10).map((item) => <Link key={item.id} href={`/customers/${item.id}`} className="rounded-lg border p-3 text-sm hover:bg-zinc-50"><p className="font-medium">{item.name}</p><p className="mt-1 text-zinc-500">{item.contact} · {item.phone} · 负责销售：{item.owner.name}</p></Link>)}</div>}
+        {duplicates.length > 0 && <div className="mt-4 grid gap-3 md:grid-cols-2">{duplicates.slice(0, 10).map((item) => <Link key={item.id} href={`/customers/${item.id}`} className="rounded-lg border p-3 text-sm hover:bg-zinc-50"><p className="font-medium">{item.name}</p><p className="mt-1 text-zinc-500">{item.contact} · {item.phone} · 负责销售：{item.owner?.name || "公海池"}</p></Link>)}</div>}
       </Card>}
-      {show && <Card className="mb-5"><h2 className="mb-4 font-medium">新建客户</h2><form onSubmit={(e) => save(e)} className="grid gap-4 md:grid-cols-2"><CustomerFields salesUsers={salesUsers} canAssignOwner={canAssignOwner} /><div className="md:col-span-2"><Button>保存客户</Button></div></form></Card>}
-      {editing && <Card className="mb-5"><h2 className="mb-4 font-medium">编辑客户</h2><form onSubmit={(e) => save(e, editing.id)} className="grid gap-4 md:grid-cols-2"><CustomerFields customer={editing} salesUsers={salesUsers} canAssignOwner={false} canManageCollaborators={editing.owner.id === currentUserId} /><div className="md:col-span-2 flex gap-2"><Button>保存修改</Button><Button type="button" variant="outline" onClick={() => setEditingId(null)}>取消</Button></div></form></Card>}
-      <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[1450px] whitespace-nowrap text-left text-sm"><thead className="bg-zinc-50 text-zinc-500"><tr>{["客户名称","业务线","行业","联系人","联系电话","负责销售","协同跟进人","客户状态","客户性质","操作"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead><tbody>{items.map((item) => { const canEdit = item.owner.id === currentUserId || item.collaborators.some((x) => x.user.id === currentUserId); return <tr key={item.id} className="border-t"><td className="px-4 py-4 font-medium">{item.name}</td><td className="px-4">{businessLineText[item.businessLine]}{item.monitoringType ? ` · ${item.monitoringType}` : ""}</td><td className="px-4">{item.industry}</td><td className="px-4">{item.contact}</td><td className="px-4">{item.phone}</td><td className="px-4">{item.owner.name}</td><td className="px-4">{item.collaborators.map((x) => x.user.name).join("、") || "—"}</td><td className="px-4"><Badge>{customerStatusText[item.status]}</Badge></td><td className="px-4">{item.nature || "—"}</td><td className="px-4"><div className="flex gap-2"><Link href={`/customers/${item.id}`} className="inline-flex h-8 items-center rounded-lg border px-3">查看明细</Link>{canEdit && <Link href={`/orders/new?customerId=${item.id}`} className="inline-flex h-8 items-center rounded-lg bg-zinc-950 px-3 text-white">新建订单</Link>}{canEdit && <Button type="button" variant="outline" className="h-8" onClick={() => setEditingId(item.id)}>编辑</Button>}</div></td></tr>})}</tbody></table></div>
+      {show && <Card className="mb-5"><h2 className="mb-4 font-medium">新建客户</h2><form onSubmit={(e) => save(e)} className="grid gap-4 md:grid-cols-2"><CustomerFields salesUsers={salesUsers} canAssignOwner={canAssignOwner} showScope /><div className="md:col-span-2"><Button>保存客户</Button></div></form></Card>}
+      {editing && <Card className="mb-5"><h2 className="mb-4 font-medium">编辑客户</h2><form onSubmit={(e) => save(e, editing.id)} className="grid gap-4 md:grid-cols-2"><CustomerFields customer={editing} salesUsers={salesUsers} canAssignOwner={false} canManageCollaborators={editing.owner?.id === currentUserId} /><div className="md:col-span-2 flex gap-2"><Button>保存修改</Button><Button type="button" variant="outline" onClick={() => setEditingId(null)}>取消</Button></div></form></Card>}
+      <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[1450px] whitespace-nowrap text-left text-sm"><thead className="bg-zinc-50 text-zinc-500"><tr>{["客户名称","业务线","行业","联系人","联系电话","负责销售","协同跟进人","客户状态","客户性质","操作"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead><tbody>{items.map((item) => { const canEdit = !item.isPublicPool && (item.owner?.id === currentUserId || item.collaborators.some((x) => x.user.id === currentUserId)); return <tr key={item.id} className="border-t"><td className="px-4 py-4 font-medium">{item.name}</td><td className="px-4">{businessLineText[item.businessLine]}{item.monitoringType ? ` · ${item.monitoringType}` : ""}</td><td className="px-4">{item.industry}</td><td className="px-4">{item.contact}</td><td className="px-4">{item.phone}</td><td className="px-4">{item.owner?.name || <Badge>公海池</Badge>}</td><td className="px-4">{item.collaborators.map((x) => x.user.name).join("、") || "—"}</td><td className="px-4"><Badge>{item.isPublicPool ? "公海客户" : customerStatusText[item.status]}</Badge></td><td className="px-4">{item.nature || "—"}</td><td className="px-4"><div className="flex gap-2"><Link href={`/customers/${item.id}`} className="inline-flex h-8 items-center rounded-lg border px-3">查看明细</Link>{item.isPublicPool ? (canClaimPublic ? <PublicCustomerClaim customerId={item.id} salesUsers={salesUsers} /> : null) : <>{canEdit && <Link href={`/orders/new?customerId=${item.id}`} className="inline-flex h-8 items-center rounded-lg bg-zinc-950 px-3 text-white">新建订单</Link>}{canEdit && <Button type="button" variant="outline" className="h-8" onClick={() => setEditingId(item.id)}>编辑</Button>}</>}</div></td></tr>})}</tbody></table></div>
       {message && <p className="mt-3 text-sm text-zinc-500">{message}</p>}
     </>
   );

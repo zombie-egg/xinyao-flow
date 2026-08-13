@@ -8,10 +8,10 @@ import { customerStatusText } from "@/lib/customer-labels";
 
 const advancedKeys = ["q", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdFrom", "createdTo", "updatedFrom", "updatedTo"];
 
-export function CustomerFilters({ params, salesUsers, canCreate }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canCreate: boolean }) {
+export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canCreate: boolean; showPublicPool: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));
   const quick = params.quick || "";
-  const quickItems = [["today", "今日新增"], ["week", "本周新增"], ["mine", "我负责的"], ["collaborative", "我协同的"]] as const;
+  const quickItems = [["today", "今日新增"], ["week", "本周新增"], ["mine", "我负责的"], ["collaborative", "我协同的"], ...(showPublicPool ? [["public", "公海池"]] as const : [])] as const;
   const toggleQuickHref = (value: string) => {
     const next = new URLSearchParams();
     Object.entries(params).forEach(([key, current]) => {

@@ -167,6 +167,7 @@ describe("客户权限与表单", () => {
   it("普通销售只能查询自己负责或协同的客户", () => {
     expect(customerAccessWhere({ id: "sales-1", role: { code: "SALES_EMPLOYEE" } })).toEqual({
       OR: [
+        { isPublicPool: true },
         { ownerId: "sales-1" },
         { collaborators: { some: { userId: "sales-1" } } },
       ],
@@ -174,6 +175,9 @@ describe("客户权限与表单", () => {
   });
   it("协同销售拥有客户业务操作权限", () => {
     expect(customerBusinessAccess({ ownerId: "owner", collaborators: [{ userId: "collab" }] }, "collab")).toBe(true);
+  });
+  it("公海客户只能查看，认领前不能进行客户业务操作", () => {
+    expect(customerBusinessAccess({ ownerId: null, isPublicPool: true, collaborators: [] }, "sales-1")).toBe(false);
   });
   it("新客户扩展字段能通过校验", () => {
     expect(customerSchema.safeParse({

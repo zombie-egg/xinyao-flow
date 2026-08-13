@@ -340,11 +340,12 @@ model Customer {
   industry          String               @default("")
   status            CustomerStatus       @default(POTENTIAL)
   nature            String?
-  ownerId           String
+  ownerId           String?
+  isPublicPool      Boolean              @default(false)
   createdById       String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  owner             User               @relation(fields: [ownerId], references: [id])
+  owner             User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   createdBy         User?              @relation("CustomerCreator", fields: [createdById], references: [id], onDelete: SetNull)
   contracts         Contract[]
   orders            Order[]
@@ -354,6 +355,7 @@ model Customer {
 
   @@unique([nameNormalized, phoneNormalized])
   @@index([ownerId, name])
+  @@index([isPublicPool, updatedAt])
   @@index([contactNormalized])
 }
 

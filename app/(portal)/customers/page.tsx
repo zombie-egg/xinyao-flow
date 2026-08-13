@@ -32,14 +32,14 @@ export default async function Customers({
   const where = {
     AND: [
       access,
-      params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { ownerId: user.id } : params.quick === "collaborative" ? { collaborators: { some: { userId: user.id } } } : {},
+      params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { isPublicPool: false, ownerId: user.id } : params.quick === "collaborative" ? { isPublicPool: false, collaborators: { some: { userId: user.id } } } : params.quick === "public" ? { isPublicPool: true } : {},
       q ? { OR: [
         { name: { contains: q, mode: "insensitive" as const } },
         { contact: { contains: q, mode: "insensitive" as const } },
         { phone: { contains: q } },
         { industry: { contains: q, mode: "insensitive" as const } },
         { contactInfo: { contains: q, mode: "insensitive" as const } },
-        { owner: { name: { contains: q, mode: "insensitive" as const } } },
+        { owner: { is: { name: { contains: q, mode: "insensitive" as const } } } },
         { collaborators: { some: { user: { name: { contains: q, mode: "insensitive" as const } } } } },
         { contactMethods: { some: { value: { contains: q, mode: "insensitive" as const } } } },
       ] } : {},
@@ -77,12 +77,13 @@ export default async function Customers({
         title="客户管理"
         description={canAll ? "查看全部客户；客户资料仅负责人和客户协同跟进人可修改" : "仅显示您负责或协同跟进的客户"}
       />
-      <CustomerFilters params={params} salesUsers={salesUsers} canCreate={canCreate} />
+      <CustomerFilters params={params} salesUsers={salesUsers} canCreate={canCreate} showPublicPool={user.role.code.startsWith("SALES") || user.role.code.startsWith("FINANCE") || user.role.code === "ADMIN"} />
       <CustomerManager
         items={items}
         currentUserId={user.id}
         salesUsers={salesUsers}
         canAssignOwner={user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER"}
+        canClaimPublic={user.role.code.startsWith("SALES")}
         returnTo={params.return}
       />
       {!items.length && <Empty text={q ? "没有匹配的客户" : "暂无客户"} />}
