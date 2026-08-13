@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { PageHeader, Empty } from "@/components/page";
 import { OrderList } from "@/components/order-list";
 import { OrderFilters } from "@/components/order-filters";
+import { DataImportExport } from "@/components/data-import-export";
 export default async function Orders({
   searchParams,
 }: {
@@ -105,6 +106,7 @@ export default async function Orders({
         description="点击订单号查看客户、合同、项目需求、财务信息和流程记录"
       />
       <OrderFilters params={params} salesUsers={salesUsers} />
+      <DataImportExport entity="orders" canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} />
       {items.length ? (
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}

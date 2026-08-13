@@ -4,6 +4,7 @@ import { PageHeader, Empty } from "@/components/page";
 import { CustomerManager } from "@/components/customer-manager";
 import { canViewAllCustomers, customerAccessWhere } from "@/lib/customer-access";
 import { CustomerFilters } from "@/components/customer-filters";
+import { DataImportExport } from "@/components/data-import-export";
 
 export default async function Customers({
   searchParams,
@@ -80,6 +81,7 @@ export default async function Customers({
         description={canAll ? "查看全部客户；客户资料仅负责人和客户协同跟进人可修改" : "仅显示您负责或协同跟进的客户"}
       />
       <CustomerFilters params={params} salesUsers={salesUsers} canCreate={canCreate} showPublicPool={user.role.code.startsWith("SALES") || user.role.code.startsWith("FINANCE") || user.role.code === "ADMIN"} />
+      <DataImportExport entity="customers" canImport={canCreate} />
       <CustomerManager
         items={items}
         currentUserId={user.id}
