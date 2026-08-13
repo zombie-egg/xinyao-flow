@@ -7,7 +7,7 @@ import { Input } from "./ui/input";
 
 const advancedKeys = ["q", "salesUserId", "approvalStatus", "contractStatus", "invoiceStage", "paymentStage", "amountMin", "amountMax", "createdFrom", "createdTo"];
 
-export function OrderFilters({ params, salesUsers }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[] }) {
+export function OrderFilters({ params, salesUsers, canImport }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canImport: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));
   const quick = params.quick || "";
   const status = params.status || "ALL";
@@ -26,11 +26,14 @@ export function OrderFilters({ params, salesUsers }: { params: Record<string, st
   };
   return (
     <div className="mb-5 space-y-3">
-      <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">
-        {quickItems.map(([value, label]) => <Link key={value} href={filterHref({ quick: quick === value ? null : value })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${quick === value ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>{label}</Link>)}
-        <Link href={filterHref({ status: status === "PROCESSING" ? "ALL" : "PROCESSING" })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "PROCESSING" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>处理中</Link>
-        <Link href={filterHref({ status: status === "COMPLETED" ? "ALL" : "COMPLETED" })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "COMPLETED" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>已完成</Link>
-        <button type="button" onClick={() => setOpen(!open)} className={`inline-flex shrink-0 items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-medium ${open ? "text-zinc-950" : "text-zinc-600"}`}>全部筛选<ChevronDown size={14} className={`transition ${open ? "rotate-180" : ""}`} /></button>
+      <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-nowrap gap-1.5 overflow-x-auto pb-1">
+          {quickItems.map(([value, label]) => <Link key={value} href={filterHref({ quick: quick === value ? null : value })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${quick === value ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>{label}</Link>)}
+          <Link href={filterHref({ status: status === "PROCESSING" ? "ALL" : "PROCESSING" })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "PROCESSING" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>处理中</Link>
+          <Link href={filterHref({ status: status === "COMPLETED" ? "ALL" : "COMPLETED" })} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${status === "COMPLETED" ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>已完成</Link>
+          <button type="button" onClick={() => setOpen(!open)} className={`inline-flex shrink-0 items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-medium ${open ? "text-zinc-950" : "text-zinc-600"}`}>全部筛选<ChevronDown size={14} className={`transition ${open ? "rotate-180" : ""}`} /></button>
+        </div>
+        <div className="ml-auto flex shrink-0 gap-1.5"><Link href="/api/orders/export" className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">导出 CSV</Link>{canImport && <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("data-import:toggle-orders"))} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">导入数据</button>}</div>
       </div>
       {open && <form className="rounded-xl border bg-white p-4">
         <input type="hidden" name="status" value={status} />

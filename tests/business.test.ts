@@ -13,8 +13,9 @@ import { businessOrderStatus, isOrderCompleted } from "../lib/order-workflow";
 import {chinaDateNumber,documentNumber} from '../lib/document-number';
 import {normalizeCustomerContact} from '../lib/customer';
 import { orderFormSchema } from "../lib/order-input";
-import { customerAccessWhere, customerBusinessAccess } from "../lib/customer-access";
+import { canEditCustomerProfile, canOperateCustomerSalesFlow, customerAccessWhere, customerBusinessAccess } from "../lib/customer-access";
 import { customerSchema } from "../lib/customer-input";
+import { statisticsDateRange, statisticsOrderWhere } from "../lib/statistics";
 describe("考勤距离", () => {
   it("同一坐标距离为 0", () =>
     expect(
@@ -176,6 +177,14 @@ describe("客户权限与表单", () => {
   it("协同销售拥有客户业务操作权限", () => {
     expect(customerBusinessAccess({ ownerId: "owner", collaborators: [{ userId: "collab" }] }, "collab")).toBe(true);
   });
+  it("管理员和销售经理可以编辑跟进客户，但不能代替负责人执行销售流程", () => {
+    const customer = { ownerId: "owner", collaborators: [{ userId: "collab" }] };
+    expect(canEditCustomerProfile("ADMIN", customer, "admin")).toBe(true);
+    expect(canEditCustomerProfile("SALES_MANAGER", customer, "manager")).toBe(true);
+    expect(canOperateCustomerSalesFlow("ADMIN", customer, "admin")).toBe(false);
+    expect(canOperateCustomerSalesFlow("SALES_MANAGER", customer, "manager")).toBe(false);
+    expect(canOperateCustomerSalesFlow("SALES_EMPLOYEE", customer, "collab")).toBe(true);
+  });
   it("公海客户只能查看，认领前不能进行客户业务操作", () => {
     expect(customerBusinessAccess({ ownerId: null, isPublicPool: true, collaborators: [] }, "sales-1")).toBe(false);
   });
@@ -224,5 +233,23 @@ describe("客户权限与表单", () => {
       receivableResponsibleUserId: "finance",
     };
     expect(orderFormSchema.safeParse(base).success).toBe(false);
+  });
+});
+describe("业务统计", () => {
+  it("默认统计全部已审核且未取消订单，不再只查本月 approvedAt", () => {
+    expect(statisticsOrderWhere({})).toEqual({
+      approvalStatus: "APPROVED",
+      status: { not: "CANCELLED" },
+    });
+  });
+  it("日期筛选使用合同签订日期并覆盖上海自然日", () => {
+    const range = statisticsDateRange("2026-08-01", "2026-08-31");
+    expect(range.start?.toISOString()).toBe("2026-07-31T16:00:00.000Z");
+    expect(range.end?.toISOString()).toBe("2026-08-31T15:59:59.999Z");
+    expect(statisticsOrderWhere(range)).toEqual({
+      approvalStatus: "APPROVED",
+      status: { not: "CANCELLED" },
+      contract: { contractDate: { gte: range.start, lte: range.end } },
+    });
   });
 });

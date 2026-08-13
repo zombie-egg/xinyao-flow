@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -12,7 +12,7 @@ type Result = {
   message: string;
 };
 
-export function DataImportExport({ entity, canImport }: { entity: Entity; canImport: boolean }) {
+export function DataImportExport({ entity, canImport, hideToolbar = false }: { entity: Entity; canImport: boolean; hideToolbar?: boolean }) {
   const [open, setOpen] = useState(false);
   const [useAi, setUseAi] = useState(true);
   const [publicPool, setPublicPool] = useState(false);
@@ -20,6 +20,11 @@ export function DataImportExport({ entity, canImport }: { entity: Entity; canImp
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  useEffect(() => {
+    const toggle = () => setOpen((value) => !value);
+    window.addEventListener(`data-import:toggle-${entity}`, toggle);
+    return () => window.removeEventListener(`data-import:toggle-${entity}`, toggle);
+  }, [entity]);
   async function preview() {
     if (!file) return setMessage("请选择要导入的文件");
     setLoading(true); setMessage(""); setResult(null);
@@ -30,10 +35,10 @@ export function DataImportExport({ entity, canImport }: { entity: Entity; canImp
     setResult(body.data); setMessage(body.data.message);
   }
   return <div className="mb-4">
-    <div className="flex flex-wrap justify-end gap-2">
-      <a href={`/api/${entity}/export`} className="inline-flex h-9 items-center rounded-lg border bg-white px-3 text-xs font-medium">导出 CSV</a>
-      {canImport && <Button type="button" className="h-9 text-xs" onClick={() => setOpen(!open)}>导入数据</Button>}
-    </div>
+    {!hideToolbar && <div className="flex flex-wrap justify-end gap-1.5">
+      <a href={`/api/${entity}/export`} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">导出 CSV</a>
+      {canImport && <Button type="button" variant="outline" className="h-9 min-w-20 px-3 text-xs text-zinc-700" onClick={() => setOpen(!open)}>导入数据</Button>}
+    </div>}
     {open && <Card className="mt-3 space-y-4">
       <div><h2 className="font-medium">{entity === "customers" ? "导入客户" : "导入订单"}</h2><p className="mt-1 text-sm text-zinc-500">支持 XLSX、XLS、CSV、JSON，最大 20MB。先预览审核，不会直接写入数据库。</p></div>
       <div className="flex flex-wrap items-center gap-3">

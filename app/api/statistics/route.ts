@@ -1,1 +1,39 @@
-import {db} from '@/lib/db';import {requirePermission} from '@/lib/auth';import {ok,apiError} from '@/lib/api';export async function GET(req:Request){try{await requirePermission('statistics:view');const q=new URL(req.url).searchParams,start=q.get('start')?new Date(q.get('start')!):new Date(new Date().getFullYear(),new Date().getMonth(),1),end=q.get('end')?new Date(q.get('end')!):new Date(),rows=await db.order.groupBy({by:['salesUserId'],where:{approvalStatus:'APPROVED',approvedAt:{gte:start,lte:end}},_count:{id:true},_sum:{amount:true},orderBy:{_sum:{amount:'desc'}}}),users=await db.user.findMany({where:{id:{in:rows.map(r=>r.salesUserId)}},select:{id:true,name:true}});return ok(rows.map(r=>({salesUserId:r.salesUserId,name:users.find(u=>u.id===r.salesUserId)?.name,orderCount:r._count.id,totalAmount:Number(r._sum.amount||0)})))}catch(e){return apiError(e)}}
+import { db } from "@/lib/db";
+import { requirePermission } from "@/lib/auth";
+import { ok, apiError } from "@/lib/api";
+import { statisticsDateRange, statisticsOrderWhere } from "@/lib/statistics";
+
+export async function GET(req: Request) {
+  try {
+    await requirePermission("statistics:view");
+    const query = new URL(req.url).searchParams;
+    const range = statisticsDateRange(query.get("start") || undefined, query.get("end") || undefined);
+    const where = statisticsOrderWhere(range);
+    const [rows, payments] = await Promise.all([
+      db.order.groupBy({
+        by: ["salesUserId"],
+        where,
+        _count: { id: true },
+        _sum: { amount: true, paidAmount: true },
+        orderBy: { _sum: { amount: "desc" } },
+      }),
+      db.payment.aggregate({ where: { order: where }, _sum: { amount: true } }),
+    ]);
+    const users = await db.user.findMany({
+      where: { id: { in: rows.map((row) => row.salesUserId) } },
+      select: { id: true, name: true },
+    });
+    return ok({
+      rows: rows.map((row) => ({
+        salesUserId: row.salesUserId,
+        name: users.find((user) => user.id === row.salesUserId)?.name,
+        orderCount: row._count.id,
+        totalAmount: Number(row._sum.amount || 0),
+        paidAmount: Number(row._sum.paidAmount || 0),
+      })),
+      paymentTotal: Number(payments._sum.amount || 0),
+    });
+  } catch (error) {
+    return apiError(error);
+  }
+}

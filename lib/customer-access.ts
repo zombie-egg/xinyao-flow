@@ -32,3 +32,32 @@ export function customerBusinessAccess(customer: {
     )
   );
 }
+
+export function canEditCustomerProfile(
+  role: RoleCode,
+  customer: {
+    ownerId: string | null;
+    isPublicPool?: boolean;
+    collaborators: { userId: string }[];
+  },
+  userId: string,
+) {
+  if (customer.isPublicPool) return false;
+  return (
+    role === "ADMIN" ||
+    role === "SALES_MANAGER" ||
+    customerBusinessAccess(customer, userId)
+  );
+}
+
+export function canOperateCustomerSalesFlow(
+  role: RoleCode,
+  customer: {
+    ownerId: string | null;
+    isPublicPool?: boolean;
+    collaborators: { userId: string }[];
+  },
+  userId: string,
+) {
+  return role.startsWith("SALES") && customerBusinessAccess(customer, userId);
+}

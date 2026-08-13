@@ -8,6 +8,7 @@ export default async function NewOrder({ searchParams }: { searchParams: Promise
   const [customers, staff] = await Promise.all([
     db.customer.findMany({
       where: {
+        isPublicPool: false,
         OR: [
           { ownerId: user.id },
           { collaborators: { some: { userId: user.id } } },

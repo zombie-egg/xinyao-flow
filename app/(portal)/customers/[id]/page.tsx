@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader, Empty } from "@/components/page";
 import { CustomerActivityForm } from "@/components/customer-activity-form";
 import { customerStatusText, businessLineText } from "@/lib/customer-labels";
-import { customerAccessWhere, customerBusinessAccess } from "@/lib/customer-access";
+import { customerAccessWhere, canOperateCustomerSalesFlow } from "@/lib/customer-access";
 import { money, dateTime } from "@/lib/utils";
 import { businessOrderStatus } from "@/lib/order-workflow";
 import { PublicCustomerClaim } from "@/components/public-customer-claim";
@@ -35,7 +35,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       : Promise.resolve([]),
   ]);
   if (!customer) notFound();
-  const canManageCustomer = user.role.code.startsWith("SALES") && customerBusinessAccess(customer, user.id);
+  const canManageCustomer = canOperateCustomerSalesFlow(user.role.code, customer, user.id);
   return (
     <>
       <PageHeader title={customer.name} description="客户资料、客户流水与历史订单明细" />
