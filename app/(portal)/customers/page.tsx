@@ -19,6 +19,7 @@ export default async function Customers({
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   const filters = {
+    ownership: params.ownership,
     status: params.customerStatus,
     nature: params.nature,
     ownerId: params.ownerId,
@@ -32,6 +33,7 @@ export default async function Customers({
   const where = {
     AND: [
       access,
+      filters.ownership === "PUBLIC" ? { isPublicPool: true } : filters.ownership === "TRACKED" ? { isPublicPool: false } : {},
       params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { isPublicPool: false, ownerId: user.id } : params.quick === "collaborative" ? { isPublicPool: false, collaborators: { some: { userId: user.id } } } : params.quick === "public" ? { isPublicPool: true } : {},
       q ? { OR: [
         { name: { contains: q, mode: "insensitive" as const } },
