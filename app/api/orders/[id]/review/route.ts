@@ -25,6 +25,8 @@ export async function PATCH(
       include: { salesUser: true,contract:true },
     });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
+    if (order.historicalSalesName)
+      return fail("离职人员历史订单仅用于查询和统计", "HISTORICAL_ORDER_READ_ONLY", 409);
     const managerStage = order.approvalStatus === "PENDING_SALES_MANAGER",
       financeStage = order.approvalStatus === "PENDING_FINANCE",
       adminStage = order.approvalStatus === "PENDING_ADMIN";

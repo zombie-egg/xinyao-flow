@@ -27,9 +27,9 @@ export default async function Orders({
       : u.role.code === "SALES_EMPLOYEE"
         ? { OR: [{ salesUserId: u.id }, { customer: { collaborators: { some: { userId: u.id } } } }] }
       : u.role.code === "TECH_MANAGER"
-        ? { approvalStatus: "APPROVED" as const }
+        ? { historicalSalesName: null, approvalStatus: "APPROVED" as const }
         : u.role.code === "TECH_EMPLOYEE"
-          ? { approvalStatus: "APPROVED" as const, technicalUserId: u.id }
+          ? { historicalSalesName: null, approvalStatus: "APPROVED" as const, technicalUserId: u.id }
           : u.role.code.startsWith("FINANCE") || u.role.code === "ADMIN"
             ? {}
             : null;

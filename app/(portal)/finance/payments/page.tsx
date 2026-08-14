@@ -17,6 +17,7 @@ export default async function Payments({
   const q = params.q?.trim() || "";
   const items = await db.order.findMany({
     where: {
+      historicalSalesName: null,
       approvalStatus: "APPROVED",
       status: { not: "CANCELLED" },
       paymentStatus: { not: "COMPLETED" },

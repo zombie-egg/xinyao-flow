@@ -17,8 +17,8 @@ export default async function Tasks({
   const q = params.q?.trim() || "";
   const manager = user.role.code === "TECH_MANAGER";
   const baseWhere = manager
-    ? { approvalStatus: "APPROVED" as const }
-    : { approvalStatus: "APPROVED" as const, technicalUserId: user.id };
+    ? { historicalSalesName: null, approvalStatus: "APPROVED" as const }
+    : { historicalSalesName: null, approvalStatus: "APPROVED" as const, technicalUserId: user.id };
   const where = {
     ...baseWhere,
     ...(q

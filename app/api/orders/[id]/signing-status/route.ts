@@ -22,6 +22,8 @@ export async function PATCH(
       include: { contract: true },
     });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
+    if (order.historicalSalesName)
+      return fail("离职人员历史订单仅用于查询和统计", "HISTORICAL_ORDER_READ_ONLY", 409);
     const allowed =
       order.salesUserId === user.id ||
       order.contract.responsibleUserId === user.id ||

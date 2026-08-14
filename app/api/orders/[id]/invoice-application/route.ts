@@ -32,6 +32,8 @@ export async function POST(
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
     const order = await db.order.findUnique({ where: { id }, include: { customer: { include: { collaborators: { select: { userId: true } } } } } });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
+    if (order.historicalSalesName)
+      return fail("离职人员历史订单仅用于查询和统计", "HISTORICAL_ORDER_READ_ONLY", 409);
     if (!user.role.code.startsWith("SALES") || (order.salesUserId !== user.id && !order.customer.collaborators.some((item) => item.userId === user.id)))
       throw new Error("FORBIDDEN");
     if (

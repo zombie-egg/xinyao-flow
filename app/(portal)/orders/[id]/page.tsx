@@ -50,11 +50,12 @@ export default async function OrderDetail({
       },
     });
   if (!order) notFound();
+  const historicalOnly = Boolean(order.historicalSalesName);
   const canSee =
     u.role.code === "ADMIN" ||
     u.role.code.startsWith("FINANCE") ||
-    (u.role.code === "TECH_MANAGER" && order.approvalStatus === "APPROVED") ||
-    (u.role.code === "TECH_EMPLOYEE" && order.technicalUserId === u.id) ||
+    (u.role.code === "TECH_MANAGER" && !historicalOnly && order.approvalStatus === "APPROVED") ||
+    (u.role.code === "TECH_EMPLOYEE" && !historicalOnly && order.technicalUserId === u.id) ||
     (u.role.code === "SALES_EMPLOYEE" && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id))) ||
     (u.role.code === "SALES_MANAGER" &&
       order.salesUser.departmentId === u.departmentId);
@@ -75,7 +76,7 @@ export default async function OrderDetail({
       order.approvalStatus === "PENDING_FINANCE",
     canAdmin =
       u.role.code === "ADMIN" && order.approvalStatus === "PENDING_ADMIN",
-    canSalesOperate = u.role.code.startsWith("SALES") && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id)),
+    canSalesOperate = !historicalOnly && u.role.code.startsWith("SALES") && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id)),
     canChangeSigningStatus = u.role.code.startsWith("SALES") && (order.salesUserId === u.id || order.contract.responsibleUserId === u.id || order.contract.signerId === u.id);
   return (
     <>
@@ -293,7 +294,7 @@ export default async function OrderDetail({
             {(canManager || canFinance || canAdmin) && (
               <ReviewActions id={id} />
             )}{" "}
-            {u.role.code === "TECH_EMPLOYEE" &&
+            {!historicalOnly && u.role.code === "TECH_EMPLOYEE" &&
               order.technicalUserId === u.id &&
               order.approvalStatus === "APPROVED" && (
                 <TechnicalActions id={id} status={order.technicalStatus} />
@@ -303,10 +304,10 @@ export default async function OrderDetail({
               order.invoiceApplicationStatus === "PENDING" && (
                 <InvoiceApplicationForm id={id} />
               )}{" "}
-            {u.role.code.startsWith("FINANCE") &&
+            {!historicalOnly && u.role.code.startsWith("FINANCE") &&
               order.invoiceApplicationStatus === "COMPLETED" &&
               order.invoiceStatus === "PENDING" && <InvoiceForm id={id} />}{" "}
-            {u.role.code.startsWith("FINANCE") &&
+            {!historicalOnly && u.role.code.startsWith("FINANCE") &&
               order.invoiceStatus === "COMPLETED" &&
               order.paymentStatus !== "COMPLETED" && (
                 <PaymentForm id={id} remaining={remaining} />

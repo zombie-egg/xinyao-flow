@@ -29,6 +29,7 @@ export async function PATCH(
     const result = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT id FROM "Order" WHERE id=${id} FOR UPDATE`;
       const order = await tx.order.findUnique({ where: { id } });
+      if (order?.historicalSalesName) throw new Error("HISTORICAL_ORDER_READ_ONLY");
       if (!order || order.approvalStatus !== "APPROVED")
         throw new Error("ORDER_NOT_APPROVED");
       if (order.technicalUserId) throw new Error("ALREADY_ASSIGNED");
@@ -66,6 +67,8 @@ export async function PATCH(
       return fail("该订单已分配，不能重复分配", "ALREADY_ASSIGNED", 409);
     if (error instanceof Error && error.message === "ORDER_NOT_APPROVED")
       return fail("订单尚未通过审核", "ORDER_NOT_APPROVED", 409);
+    if (error instanceof Error && error.message === "HISTORICAL_ORDER_READ_ONLY")
+      return fail("离职人员历史订单仅用于查询和统计", "HISTORICAL_ORDER_READ_ONLY", 409);
     return apiError(error);
   }
 }

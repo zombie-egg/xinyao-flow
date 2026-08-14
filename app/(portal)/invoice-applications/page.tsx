@@ -18,6 +18,7 @@ export default async function InvoiceApplications({
   const q = params.q?.trim() || "";
   const orders = await db.order.findMany({
     where: {
+      historicalSalesName: null,
       approvalStatus: "APPROVED",
       invoiceApplicationStatus: "PENDING",
       AND: [

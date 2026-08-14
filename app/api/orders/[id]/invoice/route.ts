@@ -35,6 +35,8 @@ export async function POST(
     const p = schema.safeParse(Object.fromEntries(form.entries()));
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
     const order = await db.order.findUnique({ where: { id } });
+    if (order?.historicalSalesName)
+      return fail("离职人员历史订单仅用于查询和统计", "HISTORICAL_ORDER_READ_ONLY", 409);
     if (!order || order.approvalStatus !== "APPROVED")
       return fail("订单尚未通过审核", "ORDER_NOT_APPROVED", 409);
     if (order.invoiceApplicationStatus !== "COMPLETED")

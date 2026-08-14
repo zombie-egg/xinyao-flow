@@ -15,6 +15,7 @@ export default async function Invoices({
     q = params.q?.trim() || "",
     items = await db.order.findMany({
       where: {
+        historicalSalesName: null,
         approvalStatus: "APPROVED",
         invoiceApplicationStatus: "COMPLETED",
         invoiceStatus: "PENDING",
