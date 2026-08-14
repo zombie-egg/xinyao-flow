@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { orderNameOptions } from "@/lib/order-input";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -337,15 +338,14 @@ export function NewOrderForm({
         <h2 className="font-medium">第二步：金额与费用</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="text-sm">
-            <RequiredLabel>产品合计</RequiredLabel>
+            产品合计
             <Input
               name="productTotal"
               type="number"
-              min="0.01"
+              min="0"
               step="0.01"
               className="mt-2"
               defaultValue={initial?.productTotal}
-              required
             />
           </label>
           {amountInput("amount", "合同金额", true)}
@@ -397,7 +397,18 @@ export function NewOrderForm({
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="text-sm">
             <RequiredLabel>订单名称</RequiredLabel>
-            <Input name="name" defaultValue={initial?.name} className="mt-2" required />
+            <select
+              name="name"
+              defaultValue={initial?.name || ""}
+              className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
+              required
+            >
+              <option value="" disabled>请选择订单名称</option>
+              {initial?.name && !orderNameOptions.includes(initial.name as (typeof orderNameOptions)[number]) && (
+                <option value={initial.name}>{initial.name}（历史订单）</option>
+              )}
+              {orderNameOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
           </label>
           <label className="text-sm">
             <RequiredLabel>合同状态</RequiredLabel>
@@ -431,12 +442,11 @@ export function NewOrderForm({
           />
           <FinanceSelector name="collaboratorId" staff={staff} initialId={initial?.collaboratorId} />
           <label className="text-sm md:col-span-2">
-            <RequiredLabel>项目需求</RequiredLabel>
+            项目需求
             <textarea
               name="projectRequirements"
               className="mt-2 min-h-36 w-full rounded-lg border p-3 text-sm"
               defaultValue={initial?.projectRequirements}
-              required
             />
           </label>
           <label className="text-sm md:col-span-2">

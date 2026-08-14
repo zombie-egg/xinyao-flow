@@ -136,7 +136,7 @@ describe("订单表单", () => {
   it("销售经理提交完整订单和应收款时可通过校验", () => {
     const result = orderFormSchema.safeParse({
       customerId: "customer",
-      name: "环境检测订单",
+      name: "年度检测",
       businessType: "ENVIRONMENTAL_MONITORING",
       productTotal: "2000",
       amount: "1900",
@@ -157,6 +157,36 @@ describe("订单表单", () => {
       receivableAmount: "1900",
       receivableExpectedDate: "2026-09-01",
       receivablePaymentType: "对公转账",
+      receivableRemark: "",
+      receivableResponsibleUserId: "finance-owner",
+      receivableCollaboratorUserId: "",
+    });
+    expect(result.success).toBe(true);
+  });
+  it("产品合计和项目需求可以留空", () => {
+    const result = orderFormSchema.safeParse({
+      customerId: "customer",
+      name: "日常检测",
+      businessType: "ENVIRONMENTAL_MONITORING",
+      productTotal: "",
+      amount: "1900",
+      technicalSupportFee: "0",
+      outsourcingFee: "0",
+      reviewFee: "",
+      otherExpense: "",
+      expenseDetails: "",
+      originalExpenseNote: "",
+      adjustedNetAmount: "",
+      signingStatus: "SIGNED",
+      contractDate: "2026-08-11",
+      signerId: "signer",
+      responsibleUserId: "responsible",
+      collaboratorId: "collaborator",
+      projectRequirements: "",
+      remark: "",
+      receivableAmount: "1900",
+      receivableExpectedDate: "2026-09-01",
+      receivablePaymentType: "",
       receivableRemark: "",
       receivableResponsibleUserId: "finance-owner",
       receivableCollaboratorUserId: "",
