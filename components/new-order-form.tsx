@@ -131,6 +131,31 @@ function StaffSelector({
   );
 }
 
+function LockedSalesperson({
+  name,
+  label,
+  staff,
+  userId,
+}: {
+  name: string;
+  label: string;
+  staff: Staff[];
+  userId: string;
+}) {
+  const user = staff.find((item) => item.id === userId);
+  return (
+    <label className="text-sm">
+      <RequiredLabel>{label}</RequiredLabel>
+      <input type="hidden" name={name} value={userId} />
+      <Input
+        value={user ? `${user.name}${user.employeeNumber ? ` · ${user.employeeNumber}` : ""}` : "当前销售"}
+        readOnly
+        className="mt-2 bg-zinc-50"
+      />
+    </label>
+  );
+}
+
 function FinanceSelector({
   name,
   staff,
@@ -435,17 +460,17 @@ export function NewOrderForm({
             />
           </label>
           <div />
-          <StaffSelector
+          <LockedSalesperson
             name="signerId"
             label="签订人"
             staff={staff}
-            initialId={initial?.signerId || (!orderId ? currentUserId : "")}
+            userId={initial?.signerId || currentUserId}
           />
-          <StaffSelector
+          <LockedSalesperson
             name="responsibleUserId"
             label="负责人"
             staff={staff}
-            initialId={initial?.responsibleUserId || (!orderId ? currentUserId : "")}
+            userId={initial?.responsibleUserId || currentUserId}
           />
           <FinanceSelector name="collaboratorId" staff={staff} initialId={initial?.collaboratorId} />
           <label className="text-sm md:col-span-2">
@@ -549,11 +574,11 @@ export function NewOrderForm({
               defaultValue={initial?.receivable?.remark || ""}
             />
           </label>
-          <StaffSelector
+          <LockedSalesperson
             name="receivableResponsibleUserId"
             label="负责人"
             staff={staff}
-            initialId={initial?.receivable?.responsibleUserId || (!orderId ? currentUserId : "")}
+            userId={initial?.receivable?.responsibleUserId || currentUserId}
           />
           <StaffSelector
             name="receivableCollaboratorUserId"

@@ -95,10 +95,8 @@ export async function POST(req: Request) {
       );
     const ownerEmployeeNumber = customerOwner.employeeNumber;
     const staffIds = [
-        p.data.signerId,
-        p.data.responsibleUserId,
+        u.id,
         p.data.collaboratorId,
-        p.data.receivableResponsibleUserId,
         ...(p.data.receivableCollaboratorUserId
           ? [p.data.receivableCollaboratorUserId]
           : []),
@@ -158,8 +156,8 @@ export async function POST(req: Request) {
           signingStatus: p.data.signingStatus,
           customerId: customer.id,
           salesUserId: customerOwnerId,
-          signerId: p.data.signerId,
-          responsibleUserId: p.data.responsibleUserId,
+          signerId: u.id,
+          responsibleUserId: u.id,
           collaboratorId: p.data.collaboratorId,
           productTotal: p.data.productTotal ?? 0,
           amount: p.data.amount,
@@ -207,7 +205,7 @@ export async function POST(req: Request) {
           expectedDate: p.data.receivableExpectedDate,
           paymentType: p.data.receivablePaymentType,
           remark: p.data.receivableRemark,
-          responsibleUserId: p.data.receivableResponsibleUserId,
+          responsibleUserId: u.id,
           collaboratorUserId: p.data.receivableCollaboratorUserId,
         },
       });

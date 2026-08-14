@@ -81,11 +81,14 @@ export async function PATCH(
     if (!customer) return fail("客户不存在", "CUSTOMER_NOT_FOUND", 404);
     if (customer.ownerId !== user.id && !customer.collaborators.some((item) => item.userId === user.id))
       throw new Error("FORBIDDEN");
+    const lockedSignerId = order.contract.signerId || order.salesUserId;
+    const lockedResponsibleId = order.contract.responsibleUserId || order.salesUserId;
+    const lockedReceivableResponsibleId = order.receivable?.responsibleUserId || order.salesUserId;
     const staffIds = [
-      data.signerId,
-      data.responsibleUserId,
+      lockedSignerId,
+      lockedResponsibleId,
       data.collaboratorId,
-      data.receivableResponsibleUserId,
+      lockedReceivableResponsibleId,
       ...(data.receivableCollaboratorUserId
         ? [data.receivableCollaboratorUserId]
         : []),
@@ -157,8 +160,8 @@ export async function PATCH(
             businessType: data.businessType,
             signingStatus: data.signingStatus,
             customerId: customer.id,
-            signerId: data.signerId,
-            responsibleUserId: data.responsibleUserId,
+            signerId: lockedSignerId,
+            responsibleUserId: lockedResponsibleId,
             collaboratorId: data.collaboratorId,
             productTotal: data.productTotal ?? 0,
             amount: data.amount,
@@ -199,7 +202,7 @@ export async function PATCH(
             expectedDate: data.receivableExpectedDate,
             paymentType: data.receivablePaymentType,
             remark: data.receivableRemark,
-            responsibleUserId: data.receivableResponsibleUserId,
+            responsibleUserId: lockedReceivableResponsibleId,
             collaboratorUserId: data.receivableCollaboratorUserId,
           },
           create: {
@@ -209,7 +212,7 @@ export async function PATCH(
             expectedDate: data.receivableExpectedDate,
             paymentType: data.receivablePaymentType,
             remark: data.receivableRemark,
-            responsibleUserId: data.receivableResponsibleUserId,
+            responsibleUserId: lockedReceivableResponsibleId,
             collaboratorUserId: data.receivableCollaboratorUserId,
           },
         });
