@@ -73,6 +73,7 @@ export async function GET(req: Request) {
             { contact: { contains: search, mode: "insensitive" as const } },
             { phone: { contains: search } },
             { contactInfo: { contains: search, mode: "insensitive" as const } },
+            { pendingOwnerName: { contains: search, mode: "insensitive" as const } },
             { contactMethods: { some: { value: { contains: search, mode: "insensitive" as const } } } },
           ],
         }

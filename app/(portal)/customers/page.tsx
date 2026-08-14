@@ -45,6 +45,7 @@ export default async function Customers({
         { phone: { contains: q } },
         { industry: { contains: q, mode: "insensitive" as const } },
         { contactInfo: { contains: q, mode: "insensitive" as const } },
+        { pendingOwnerName: { contains: q, mode: "insensitive" as const } },
         { owner: { is: { name: { contains: q, mode: "insensitive" as const } } } },
         { collaborators: { some: { user: { name: { contains: q, mode: "insensitive" as const } } } } },
         { contactMethods: { some: { value: { contains: q, mode: "insensitive" as const } } } },

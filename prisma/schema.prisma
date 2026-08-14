@@ -343,6 +343,7 @@ model Customer {
   status            CustomerStatus          @default(POTENTIAL)
   nature            String?
   ownerId           String?
+  pendingOwnerName  String?
   isPublicPool      Boolean                 @default(false)
   createdById       String?
   createdAt         DateTime                @default(now())
@@ -357,6 +358,7 @@ model Customer {
 
   @@unique([nameNormalized, phoneNormalized])
   @@index([ownerId, name])
+  @@index([pendingOwnerName])
   @@index([isPublicPool, updatedAt])
   @@index([contactNormalized])
   @@index([updatedAt])

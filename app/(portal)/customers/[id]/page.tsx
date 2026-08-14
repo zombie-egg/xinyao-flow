@@ -50,7 +50,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           ["联系人", customer.contact],
           ["联系电话", customer.phone],
           ["地址", customer.address || "—"],
-          ["负责销售", customer.owner?.name || "公海池"],
+          ["负责销售", customer.owner?.name || (customer.pendingOwnerName ? `${customer.pendingOwnerName}（待注册）` : "公海池")],
           ["协同跟进人", customer.collaborators.map((item) => item.user.name).join("、") || "—"],
         ].map(([label, value]) => <div key={label} className="flex justify-between gap-4"><dt className="text-zinc-500">{label}</dt><dd className="text-right">{value}</dd></div>)}</dl>{customer.contactMethods.length > 0 && <div className="mt-4 border-t pt-4 text-sm"><p className="text-zinc-500">全部联系方式</p>{customer.contactMethods.map((item) => <p key={item.id} className="mt-2">{item.label || "其他"}：{item.value}</p>)}</div>}</Card>
         <Card><h2 className="font-medium">客户流水</h2>{canManageCustomer && <CustomerActivityForm customerId={customer.id} />}{customer.activities.length ? <div className="mt-4 max-h-[460px] space-y-3 overflow-y-auto">{customer.activities.map((item) => <div key={item.id} className="rounded-lg bg-zinc-50 p-3 text-sm"><p className="whitespace-pre-wrap">{item.content}</p><p className="mt-2 text-xs text-zinc-400">{item.author.name} · {dateTime(item.createdAt)}</p></div>)}</div> : <Empty text="暂无客户流水" />}</Card>
