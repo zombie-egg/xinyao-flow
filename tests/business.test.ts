@@ -136,6 +136,7 @@ describe("订单表单", () => {
   it("销售经理提交完整订单和应收款时可通过校验", () => {
     const result = orderFormSchema.safeParse({
       customerId: "customer",
+      contractNumber: "HT-2026-001",
       name: "年度检测",
       businessType: "ENVIRONMENTAL_MONITORING",
       productTotal: "2000",
@@ -166,6 +167,7 @@ describe("订单表单", () => {
   it("产品合计和项目需求可以留空", () => {
     const result = orderFormSchema.safeParse({
       customerId: "customer",
+      contractNumber: "HT-2026-002",
       name: "日常检测",
       businessType: "ENVIRONMENTAL_MONITORING",
       productTotal: "",
@@ -246,7 +248,8 @@ describe("客户权限与表单", () => {
   it("订单业务类型不能选择职业卫生", () => {
     const base = {
       customerId: "customer",
-      name: "职业卫生订单",
+      contractNumber: "HT-2026-003",
+      name: "职业卫生委托检测",
       businessType: "OCCUPATIONAL_HEALTH",
       productTotal: "1000",
       amount: "1000",

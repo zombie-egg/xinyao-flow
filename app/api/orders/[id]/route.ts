@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { saveUpload } from "@/lib/uploads";
 import { contractFileTypes, orderFormSchema } from "@/lib/order-input";
+import { duplicateOrderNumberResponse, findOrderByNumber } from "@/lib/order-number";
 
 export const runtime = "nodejs";
 const rejectedStatuses = [
@@ -48,6 +49,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  let submittedContractNumber: string | undefined;
   try {
     const user = await requireUser();
     const { id } = await params;
@@ -77,6 +79,9 @@ export async function PATCH(
     if (!parsed.success)
       return fail(parsed.error.issues[0].message, "VALIDATION_ERROR");
     const data = parsed.data;
+    submittedContractNumber = data.contractNumber;
+    const duplicate = await findOrderByNumber(data.contractNumber, id);
+    if (duplicate) return duplicateOrderNumberResponse(duplicate);
     const customer = await db.customer.findUnique({ where: { id: data.customerId }, include: { collaborators: { select: { userId: true } } } });
     if (!customer) return fail("客户不存在", "CUSTOMER_NOT_FOUND", 404);
     if (customer.ownerId !== user.id && !customer.collaborators.some((item) => item.userId === user.id))
@@ -153,10 +158,23 @@ export async function PATCH(
 
     const updated = await db.$transaction(
       async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order-number-${data.contractNumber.toLowerCase()}`}))`;
+        const duplicateInTransaction = await tx.order.findFirst({
+          where: {
+            id: { not: id },
+            OR: [
+              { orderNumber: { equals: data.contractNumber, mode: "insensitive" } },
+              { contract: { contractNumber: { equals: data.contractNumber, mode: "insensitive" } } },
+            ],
+          },
+          select: { id: true },
+        });
+        if (duplicateInTransaction) throw new Error("CONTRACT_NUMBER_EXISTS");
         await tx.contract.update({
           where: { id: order.contractId },
           data: {
             name: `${data.name}合同`,
+            contractNumber: data.contractNumber,
             businessType: data.businessType,
             signingStatus: data.signingStatus,
             customerId: customer.id,
@@ -182,6 +200,7 @@ export async function PATCH(
         const item = await tx.order.update({
           where: { id },
           data: {
+            orderNumber: data.contractNumber,
             customerId: customer.id,
             name: data.name,
             contact: customer.contact,
@@ -198,6 +217,7 @@ export async function PATCH(
         await tx.receivable.upsert({
           where: { orderId: id },
           update: {
+            number: `PMO.${data.contractNumber}`,
             amount: data.receivableAmount,
             expectedDate: data.receivableExpectedDate,
             paymentType: data.receivablePaymentType,
@@ -207,7 +227,7 @@ export async function PATCH(
           },
           create: {
             orderId: id,
-            number: `PMO.${order.contract.contractNumber}`,
+            number: `PMO.${data.contractNumber}`,
             amount: data.receivableAmount,
             expectedDate: data.receivableExpectedDate,
             paymentType: data.receivablePaymentType,
@@ -254,6 +274,16 @@ export async function PATCH(
     );
     return ok(updated);
   } catch (error) {
+    if (
+      (error instanceof Error && error.message === "CONTRACT_NUMBER_EXISTS") ||
+      (typeof error === "object" && error && "code" in error && String(error.code) === "P2002")
+    ) {
+      const existing = submittedContractNumber
+        ? await findOrderByNumber(submittedContractNumber)
+        : null;
+      if (existing) return duplicateOrderNumberResponse(existing);
+      return fail("已有该合同编号，请勿重复使用", "CONTRACT_NUMBER_EXISTS", 409);
+    }
     return apiError(error);
   }
 }

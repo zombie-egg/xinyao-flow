@@ -4,6 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+export function ContractSigningStatusAction({ id, status }: { id: string; status: "SIGNED" | "PENDING_SIGNATURE" }) {
+  const router = useRouter();
+  const [value, setValue] = useState(status), [message, setMessage] = useState("");
+  async function save() {
+    const res = await fetch(`/api/orders/${id}/signing-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ signingStatus: value }),
+    });
+    const body = await res.json();
+    setMessage(res.ok ? "合同状态已更新" : body.message);
+    if (res.ok) router.refresh();
+  }
+  return <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4"><select value={value} onChange={(event) => setValue(event.target.value as typeof value)} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="PENDING_SIGNATURE">待签署</option><option value="SIGNED">已签署</option></select><Button type="button" onClick={save} disabled={value === status}>更新合同状态</Button>{message && <span className="text-sm text-zinc-500">{message}</span>}</div>;
+}
 export function RejectedOrderActions({ id }: { id: string }) {
   const router = useRouter();
   const [message, setMessage] = useState("");

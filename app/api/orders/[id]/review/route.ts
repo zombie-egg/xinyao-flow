@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { z } from "zod";
-import { chinaDateNumber, documentNumber } from "@/lib/document-number";
 const schema = z
   .object({
     result: z.enum(["APPROVE", "REJECT"]),
@@ -71,10 +70,8 @@ export async function PATCH(
           status: "PENDING_ADMIN" as const,
         };
       else {
-        if (!order.salesUser.employeeNumber)
-          throw new Error("EMPLOYEE_NUMBER_REQUIRED");
         contractNumber=order.contract.contractNumber||undefined;
-        if(!contractNumber){const date=chinaDateNumber();await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`contract-number-${order.salesUser.employeeNumber}-${date}`}))`;const count=await tx.contract.count({where:{contractNumber:{startsWith:date,endsWith:order.salesUser.employeeNumber}}});contractNumber=documentNumber(order.salesUser.employeeNumber,date,count+1)}
+        if(!contractNumber) throw new Error("CONTRACT_NUMBER_REQUIRED");
         data = {
           approvalStatus: "APPROVED" as const,
           status: "APPROVED" as const,

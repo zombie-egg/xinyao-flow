@@ -191,7 +191,6 @@ function FinanceSelector({
 export function NewOrderForm({
   customers,
   staff,
-  employeeNumber,
   currentUserId,
   orderId,
   initial,
@@ -199,7 +198,6 @@ export function NewOrderForm({
 }: {
   customers: Customer[];
   staff: Staff[];
-  employeeNumber: string | null;
   currentUserId: string;
   orderId?: string;
   initial?: OrderFormInitial;
@@ -211,6 +209,7 @@ export function NewOrderForm({
     ),
     [customerSearch, setCustomerSearch] = useState(""),
     [message, setMessage] = useState(""),
+    [duplicateOrder, setDuplicateOrder] = useState<{ id: string; orderNumber: string; name: string; customerName: string } | null>(null),
     [loading, setLoading] = useState(false),
     [showReceivable, setShowReceivable] = useState(true),
     [amounts, setAmounts] = useState({
@@ -235,6 +234,17 @@ export function NewOrderForm({
         Number(amounts.otherExpense || 0),
       [amounts],
     );
+  async function checkContractNumber(value: string) {
+    const number = value.trim();
+    if (!number) {
+      setDuplicateOrder(null);
+      return;
+    }
+    const query = new URLSearchParams({ number });
+    if (orderId) query.set("excludeId", orderId);
+    const res = await fetch(`/api/orders/duplicate-number?${query}`), body = await res.json();
+    setDuplicateOrder(res.ok ? body.data : null);
+  }
   function amountInput(
     name: keyof typeof amounts,
     label: string,
@@ -262,10 +272,6 @@ export function NewOrderForm({
       setMessage("请先选择或创建客户");
       return;
     }
-    if (!employeeNumber) {
-      setMessage("系统尚未生成您的销售工号，请刷新页面或联系管理员");
-      return;
-    }
     setLoading(true);
     const form = new FormData(e.currentTarget);
     form.set("customerId", customerId);
@@ -276,6 +282,7 @@ export function NewOrderForm({
         }),
         body = await res.json();
       if (!res.ok) {
+        if (body.code === "CONTRACT_NUMBER_EXISTS" && body.data) setDuplicateOrder(body.data);
         setMessage(body.message || "提交失败，请检查填写内容");
         return;
       }
@@ -310,16 +317,19 @@ export function NewOrderForm({
           <label className="text-sm">
             <RequiredLabel>合同编号</RequiredLabel>
             <Input
-              value={
-                initial?.contractNumber
-                  ? initial.contractNumber
-                  : employeeNumber
-                  ? `提交时自动生成：日期 + 流水号 + ${employeeNumber}`
-                  : "等待系统生成销售工号"
-              }
-              readOnly
-              className="mt-2 bg-zinc-50"
+              name="contractNumber"
+              defaultValue={initial?.contractNumber || ""}
+              onBlur={(event) => void checkContractNumber(event.target.value)}
+              placeholder="请输入合同编号，订单号将与合同编号相同"
+              maxLength={100}
+              required
+              className="mt-2"
             />
+            {duplicateOrder && (
+              <Link href={`/orders/${duplicateOrder.id}`} className="mt-2 block text-sm text-red-600 underline">
+                已有该合同编号：{duplicateOrder.orderNumber} · {duplicateOrder.customerName} · {duplicateOrder.name}
+              </Link>
+            )}
           </label>
           <label className="text-sm md:col-span-2">
             <RequiredLabel>客户名称</RequiredLabel>
@@ -445,8 +455,8 @@ export function NewOrderForm({
               defaultValue={initial?.signingStatus || "SIGNED"}
               className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
             >
-              <option value="SIGNED">已签订</option>
-              <option value="PENDING_SIGNATURE">待签订</option>
+              <option value="SIGNED">已签署</option>
+              <option value="PENDING_SIGNATURE">待签署</option>
             </select>
           </label>
           <label className="text-sm">
@@ -523,7 +533,7 @@ export function NewOrderForm({
           <label className="text-sm">
             <RequiredLabel>编号</RequiredLabel>
             <Input
-              value={initial?.receivable?.number || "PMO.提交后自动生成的订单号"}
+              value={initial?.receivable?.number || "PMO.对应的订单号"}
               readOnly
               className="mt-2 bg-zinc-50"
             />

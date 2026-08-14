@@ -108,7 +108,6 @@ export default async function EditRejectedOrder({
       <NewOrderForm
         customers={customers}
         staff={staff}
-        employeeNumber={user.employeeNumber}
         currentUserId={user.id}
         orderId={id}
         initial={initial}

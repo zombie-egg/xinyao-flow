@@ -2,8 +2,8 @@ import { db } from "@/lib/db";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { saveUpload } from "@/lib/uploads";
-import { chinaDateNumber, documentNumber } from "@/lib/document-number";
 import { contractFileTypes, orderFormSchema } from "@/lib/order-input";
+import { duplicateOrderNumberResponse, findOrderByNumber } from "@/lib/order-number";
 export const runtime = "nodejs";
 export async function GET() {
   try {
@@ -40,6 +40,7 @@ export async function GET() {
   }
 }
 export async function POST(req: Request) {
+  let submittedContractNumber: string | undefined;
   try {
     const u = await requirePermission("order:create");
     if (!u.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
@@ -55,6 +56,9 @@ export async function POST(req: Request) {
     }
     const p = orderFormSchema.safeParse(Object.fromEntries(form.entries()));
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
+    submittedContractNumber = p.data.contractNumber;
+    const duplicate = await findOrderByNumber(p.data.contractNumber);
+    if (duplicate) return duplicateOrderNumberResponse(duplicate);
     const file = form.get("contract");
     if (!(file instanceof File) || !file.size)
       return fail("请上传合同文件", "CONTRACT_REQUIRED");
@@ -70,7 +74,6 @@ export async function POST(req: Request) {
           select: {
             id: true,
             name: true,
-            employeeNumber: true,
             departmentId: true,
             role: { select: { code: true } },
           },
@@ -87,13 +90,6 @@ export async function POST(req: Request) {
       customer.ownerId === u.id ||
       customer.collaborators.some((item) => item.userId === u.id);
     if (!canUseCustomer) throw new Error("FORBIDDEN");
-    if (!customerOwner.employeeNumber)
-      return fail(
-        "客户负责销售尚未生成工号，请联系管理员检查账号信息",
-        "EMPLOYEE_NUMBER_REQUIRED",
-        409,
-      );
-    const ownerEmployeeNumber = customerOwner.employeeNumber;
     const staffIds = [
         u.id,
         p.data.collaboratorId,
@@ -140,14 +136,18 @@ export async function POST(req: Request) {
         reviewFee -
         otherExpense;
     const order = await db.$transaction(async (tx) => {
-      const date = chinaDateNumber();
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`contract-number-${ownerEmployeeNumber}-${date}`}))`;
-      const count = await tx.contract.count({
-          where: {
-            contractNumber: { startsWith: date, endsWith: ownerEmployeeNumber },
-          },
-        }),
-        contractNumber = documentNumber(ownerEmployeeNumber, date, count + 1);
+      const contractNumber = p.data.contractNumber;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order-number-${contractNumber.toLowerCase()}`}))`;
+      const duplicateInTransaction = await tx.order.findFirst({
+        where: {
+          OR: [
+            { orderNumber: { equals: contractNumber, mode: "insensitive" } },
+            { contract: { contractNumber: { equals: contractNumber, mode: "insensitive" } } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (duplicateInTransaction) throw new Error("CONTRACT_NUMBER_EXISTS");
       const contract = await tx.contract.create({
         data: {
           name: `${p.data.name}合同`,
@@ -181,6 +181,7 @@ export async function POST(req: Request) {
       const item = await tx.order.create({
         data: {
           contractId: contract.id,
+          orderNumber: contractNumber,
           customerId: customer.id,
           salesUserId: customerOwnerId,
           name: p.data.name,
@@ -243,6 +244,16 @@ export async function POST(req: Request) {
     }, { maxWait: 5000, timeout: 15000 });
     return ok(order, 201);
   } catch (e) {
+    if (
+      (e instanceof Error && e.message === "CONTRACT_NUMBER_EXISTS") ||
+      (typeof e === "object" && e && "code" in e && String(e.code) === "P2002")
+    ) {
+      const existing = submittedContractNumber
+        ? await findOrderByNumber(submittedContractNumber)
+        : null;
+      if (existing) return duplicateOrderNumberResponse(existing);
+      return fail("已有该合同编号，请勿重复创建", "CONTRACT_NUMBER_EXISTS", 409);
+    }
     return apiError(e);
   }
 }
