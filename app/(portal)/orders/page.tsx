@@ -73,6 +73,7 @@ export default async function Orders({
                 name: { contains: q, mode: "insensitive" as const },
               },
             },
+            { historicalSalesName: { contains: q, mode: "insensitive" as const } },
           ],
         }
       : {},

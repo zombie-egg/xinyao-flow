@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     const where = statisticsOrderWhere(range);
     const [rows, payments] = await Promise.all([
       db.order.groupBy({
-        by: ["salesUserId"],
+        by: ["salesUserId", "historicalSalesName"],
         where,
         _count: { id: true },
         _sum: { amount: true, paidAmount: true },
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     return ok({
       rows: rows.map((row) => ({
         salesUserId: row.salesUserId,
-        name: users.find((user) => user.id === row.salesUserId)?.name,
+        name: row.historicalSalesName || users.find((user) => user.id === row.salesUserId)?.name,
         orderCount: row._count.id,
         totalAmount: Number(row._sum.amount || 0),
         paidAmount: Number(row._sum.paidAmount || 0),

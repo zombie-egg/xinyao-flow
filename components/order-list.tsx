@@ -21,6 +21,7 @@ type Item = {
   customer: { id: string; name: string };
   customerCollaboratorIds?: string[];
   salesUser: { name: string };
+  historicalSalesName?: string | null;
 };
 export function OrderList({
   items,
@@ -65,7 +66,7 @@ export function OrderList({
                 </td>
                 <td className="px-4">{x.name}</td>
                 <td className="px-4">{x.customer.name}</td>
-                <td className="px-4">{x.salesUser.name}</td>
+                <td className="px-4">{x.historicalSalesName || x.salesUser.name}</td>
                 <td className="px-4">{money(Number(x.amount))}</td>
                 <td className="px-4">
                   <Badge>

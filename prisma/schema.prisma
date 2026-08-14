@@ -327,28 +327,28 @@ model AnnualLeaveRule {
 }
 
 model Customer {
-  id                String             @id @default(cuid())
+  id                String                  @id @default(cuid())
   name              String
-  nameNormalized    String             @default("")
+  nameNormalized    String                  @default("")
   contact           String
-  contactNormalized String             @default("")
+  contactNormalized String                  @default("")
   phone             String
-  phoneNormalized   String             @default("")
+  phoneNormalized   String                  @default("")
   address           String?
   contactInfo       String?
   remark            String?
-  businessLine      BusinessType         @default(ENVIRONMENTAL_MONITORING)
+  businessLine      BusinessType            @default(ENVIRONMENTAL_MONITORING)
   monitoringType    String?
-  industry          String               @default("")
-  status            CustomerStatus       @default(POTENTIAL)
+  industry          String                  @default("")
+  status            CustomerStatus          @default(POTENTIAL)
   nature            String?
   ownerId           String?
-  isPublicPool      Boolean              @default(false)
+  isPublicPool      Boolean                 @default(false)
   createdById       String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  owner             User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  createdBy         User?              @relation("CustomerCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  owner             User?                   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy         User?                   @relation("CustomerCreator", fields: [createdById], references: [id], onDelete: SetNull)
   contracts         Contract[]
   orders            Order[]
   activities        CustomerActivity[]
@@ -408,6 +408,7 @@ model Contract {
   signingStatus       ContractSigningStatus @default(SIGNED)
   customerId          String
   salesUserId         String
+  historicalSalesName String?
   signerId            String?
   responsibleUserId   String?
   collaboratorId      String?
@@ -447,6 +448,7 @@ model Order {
   contractId                 String              @unique
   customerId                 String
   salesUserId                String
+  historicalSalesName        String?
   financeUserId              String?
   technicalUserId            String?
   name                       String              @default("未命名订单")
