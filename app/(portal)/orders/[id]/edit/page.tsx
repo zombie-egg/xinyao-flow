@@ -109,6 +109,7 @@ export default async function EditRejectedOrder({
         customers={customers}
         staff={staff}
         employeeNumber={user.employeeNumber}
+        currentUserId={user.id}
         orderId={id}
         initial={initial}
       />

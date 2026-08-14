@@ -46,6 +46,7 @@ export default async function NewOrder({ searchParams }: { searchParams: Promise
         customers={customers}
         staff={staff}
         employeeNumber={user.employeeNumber}
+        currentUserId={user.id}
         initialCustomerId={params.customerId}
       />
     </>

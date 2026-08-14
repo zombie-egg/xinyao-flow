@@ -167,6 +167,7 @@ export function NewOrderForm({
   customers,
   staff,
   employeeNumber,
+  currentUserId,
   orderId,
   initial,
   initialCustomerId,
@@ -174,6 +175,7 @@ export function NewOrderForm({
   customers: Customer[];
   staff: Staff[];
   employeeNumber: string | null;
+  currentUserId: string;
   orderId?: string;
   initial?: OrderFormInitial;
   initialCustomerId?: string;
@@ -433,12 +435,17 @@ export function NewOrderForm({
             />
           </label>
           <div />
-          <StaffSelector name="signerId" label="签订人" staff={staff} initialId={initial?.signerId} />
+          <StaffSelector
+            name="signerId"
+            label="签订人"
+            staff={staff}
+            initialId={initial?.signerId || (!orderId ? currentUserId : "")}
+          />
           <StaffSelector
             name="responsibleUserId"
             label="负责人"
             staff={staff}
-            initialId={initial?.responsibleUserId}
+            initialId={initial?.responsibleUserId || (!orderId ? currentUserId : "")}
           />
           <FinanceSelector name="collaboratorId" staff={staff} initialId={initial?.collaboratorId} />
           <label className="text-sm md:col-span-2">
@@ -546,7 +553,7 @@ export function NewOrderForm({
             name="receivableResponsibleUserId"
             label="负责人"
             staff={staff}
-            initialId={initial?.receivable?.responsibleUserId}
+            initialId={initial?.receivable?.responsibleUserId || (!orderId ? currentUserId : "")}
           />
           <StaffSelector
             name="receivableCollaboratorUserId"
