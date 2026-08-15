@@ -1,7 +1,11 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM "User" WHERE lower("email") = lower('zlt@xinyaohuanjing.com') AND "status" = 'ACTIVE'::"UserStatus") THEN
-    RAISE EXCEPTION '张乐童管理员账号不存在或未启用，停止历史数据归属迁移';
+    INSERT INTO "User" ("id","name","username","email","emailVerifiedAt","passwordHash","roleId","jobTitle","employmentStartDate","workYears","annualLeaveDays","status")
+    SELECT 'user_zhangletong_admin', '张乐童', 'zhangle tong', 'zlt@xinyaohuanjing.com', CURRENT_TIMESTAMP,
+      '$2b$12$6BVQvw6jx1vRXnuniG/3r.39sTFhYiYbB5H0/FelODRyWpdiKzjPG', r."id", '总管理员', CURRENT_TIMESTAMP, 0, 0, 'ACTIVE'::"UserStatus"
+    FROM "Role" r WHERE r."code"='ADMIN'::"RoleCode"
+    ON CONFLICT ("email") DO UPDATE SET "name"='张乐童', "roleId"=EXCLUDED."roleId", "status"='ACTIVE'::"UserStatus";
   END IF;
 END $$;
 
