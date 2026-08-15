@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -116,7 +117,7 @@ export default async function Orders({
       {items.length ? (
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}
-          invoiceApplicantId={u.role.code.startsWith("SALES") ? u.id : undefined}
+          invoiceApplicantId={hasSalesCapabilities(u.role.code) ? u.id : undefined}
         />
       ) : (
         <>

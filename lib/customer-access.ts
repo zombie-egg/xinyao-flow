@@ -4,6 +4,10 @@ export function canViewAllCustomers(role: RoleCode) {
   return role === "ADMIN" || role === "SALES_MANAGER" || role.startsWith("FINANCE");
 }
 
+export function hasSalesCapabilities(role: RoleCode) {
+  return role === "ADMIN" || role.startsWith("SALES");
+}
+
 export function customerAccessWhere(user: {
   id: string;
   role: { code: RoleCode };
@@ -59,5 +63,5 @@ export function canOperateCustomerSalesFlow(
   },
   userId: string,
 ) {
-  return role.startsWith("SALES") && customerBusinessAccess(customer, userId);
+  return hasSalesCapabilities(role) && customerBusinessAccess(customer, userId);
 }

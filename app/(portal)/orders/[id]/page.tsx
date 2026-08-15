@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
@@ -76,8 +77,8 @@ export default async function OrderDetail({
       order.approvalStatus === "PENDING_FINANCE",
     canAdmin =
       u.role.code === "ADMIN" && order.approvalStatus === "PENDING_ADMIN",
-    canSalesOperate = !historicalOnly && u.role.code.startsWith("SALES") && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id)),
-    canChangeSigningStatus = u.role.code.startsWith("SALES") && (order.salesUserId === u.id || order.contract.responsibleUserId === u.id || order.contract.signerId === u.id);
+    canSalesOperate = !historicalOnly && hasSalesCapabilities(u.role.code) && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id)),
+    canChangeSigningStatus = hasSalesCapabilities(u.role.code) && (order.salesUserId === u.id || order.contract.responsibleUserId === u.id || order.contract.signerId === u.id);
   return (
     <>
       <PageHeader

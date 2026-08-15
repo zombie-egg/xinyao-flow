@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
@@ -34,7 +35,7 @@ export async function POST(
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
     if (order.historicalSalesName)
       return fail("离职人员历史订单仅用于查询和统计", "HISTORICAL_ORDER_READ_ONLY", 409);
-    if (!user.role.code.startsWith("SALES") || (order.salesUserId !== user.id && !order.customer.collaborators.some((item) => item.userId === user.id)))
+    if (!hasSalesCapabilities(user.role.code) || (order.salesUserId !== user.id && !order.customer.collaborators.some((item) => item.userId === user.id)))
       throw new Error("FORBIDDEN");
     if (
       order.approvalStatus !== "APPROVED" ||

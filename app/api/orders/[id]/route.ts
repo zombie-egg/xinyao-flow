@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
@@ -53,7 +54,7 @@ export async function PATCH(
   try {
     const user = await requireUser();
     const { id } = await params;
-    if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
+    if (!hasSalesCapabilities(user.role.code)) throw new Error("FORBIDDEN");
     const order = await db.order.findUnique({
       where: { id },
       include: { contract: true, receivable: true, customer: { include: { collaborators: { select: { userId: true } } } } },
@@ -297,7 +298,7 @@ export async function DELETE(
   try {
     const user = await requireUser();
     const { id } = await params;
-    if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
+    if (!hasSalesCapabilities(user.role.code)) throw new Error("FORBIDDEN");
     const order = await db.order.findUnique({ where: { id } });
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
     const customer = await db.customer.findUnique({ where: { id: order.customerId }, include: { collaborators: { select: { userId: true } } } });

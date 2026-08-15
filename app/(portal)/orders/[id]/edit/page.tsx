@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -17,7 +18,7 @@ export default async function EditRejectedOrder({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
+  if (!hasSalesCapabilities(user.role.code)) throw new Error("FORBIDDEN");
   const [order, customers, staff] = await Promise.all([
     db.order.findUnique({
       where: { id },

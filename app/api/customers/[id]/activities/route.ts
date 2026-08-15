@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { z } from "zod";
-import { customerBusinessAccess } from "@/lib/customer-access";
+import { customerBusinessAccess, hasSalesCapabilities } from "@/lib/customer-access";
 
 const schema = z.object({
   content: z.string().trim().min(1, "请填写客户流水内容").max(5000),
@@ -28,7 +28,7 @@ export async function POST(
       },
     });
     if (!customer) return fail("客户不存在", "NOT_FOUND", 404);
-    if (!user.role.code.startsWith("SALES") || !customerBusinessAccess(customer, user.id))
+    if (!hasSalesCapabilities(user.role.code) || !customerBusinessAccess(customer, user.id))
       throw new Error("FORBIDDEN");
     const activity = await db.$transaction(async (tx) => {
       const item = await tx.customerActivity.create({

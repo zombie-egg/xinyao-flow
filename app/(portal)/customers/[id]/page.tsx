@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader, Empty } from "@/components/page";
 import { CustomerActivityForm } from "@/components/customer-activity-form";
 import { customerStatusText, businessLineText } from "@/lib/customer-labels";
-import { customerAccessWhere, canOperateCustomerSalesFlow } from "@/lib/customer-access";
+import { customerAccessWhere, canOperateCustomerSalesFlow, hasSalesCapabilities } from "@/lib/customer-access";
 import { money, dateTime } from "@/lib/utils";
 import { businessOrderStatus } from "@/lib/order-workflow";
 import { PublicCustomerClaim } from "@/components/public-customer-claim";
@@ -26,9 +26,9 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         orders: { include: { salesUser: true }, orderBy: { createdAt: "desc" } },
       },
     }),
-    user.role.code.startsWith("SALES")
+    hasSalesCapabilities(user.role.code)
       ? db.user.findMany({
-          where: { status: "ACTIVE", role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } } },
+          where: { status: "ACTIVE", role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } } },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
@@ -39,7 +39,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   return (
     <>
       <PageHeader title={customer.name} description="客户资料、客户流水与历史订单明细" />
-      <div className="mb-5 flex flex-wrap gap-2">{customer.isPublicPool && user.role.code.startsWith("SALES") ? <PublicCustomerClaim customerId={customer.id} salesUsers={salesUsers} /> : canManageCustomer && <Link href={`/orders/new?customerId=${customer.id}`} className="inline-flex h-10 items-center rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white">为该客户新建订单</Link>}<Link href="/customers" className="inline-flex h-10 items-center rounded-lg border px-4 text-sm">返回客户管理</Link></div>
+      <div className="mb-5 flex flex-wrap gap-2">{customer.isPublicPool && hasSalesCapabilities(user.role.code) ? <PublicCustomerClaim customerId={customer.id} salesUsers={salesUsers} /> : canManageCustomer && <Link href={`/orders/new?customerId=${customer.id}`} className="inline-flex h-10 items-center rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white">为该客户新建订单</Link>}<Link href="/customers" className="inline-flex h-10 items-center rounded-lg border px-4 text-sm">返回客户管理</Link></div>
       <div className="grid gap-5 xl:grid-cols-2">
         <Card><h2 className="font-medium">客户资料</h2><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">{[
           ["业务线", businessLineText[customer.businessLine]],

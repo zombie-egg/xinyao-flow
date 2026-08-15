@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         ai = { used: true, notes: ["AI 服务暂时不可用，已使用系统规则生成预览"], agreed: false, error: error instanceof Error ? error.message : "AI_ERROR" };
       }
     }
-    const sales = await db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } } }, select: { id: true, name: true, username: true, email: true, employeeNumber: true } });
+    const sales = await db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } } }, select: { id: true, name: true, username: true, email: true, employeeNumber: true } });
     const matchName = (name: string) => sales.find((person) => [person.name, person.username, person.email, person.employeeNumber].filter(Boolean).some((value) => String(value).trim().toLowerCase() === name.trim().toLowerCase()));
     const preview = parsed.rows.slice(0, 100).map((row, index) => {
       const ownerText = publicPool ? "" : rowValue(row, mapping, entity === "customers" ? "owner" : "responsible");

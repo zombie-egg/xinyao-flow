@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -13,7 +14,7 @@ export async function PATCH(
 ) {
   try {
     const user = await requireUser();
-    if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
+    if (!hasSalesCapabilities(user.role.code)) throw new Error("FORBIDDEN");
     const { id } = await params;
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) return fail("请选择正确的合同状态", "VALIDATION_ERROR");

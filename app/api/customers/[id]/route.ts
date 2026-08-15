@@ -39,7 +39,7 @@ export async function PATCH(
       where: {
         id: { in: [ownerId, ...collaboratorIds] },
         status: "ACTIVE",
-        role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } },
+        role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } },
       },
     });
     if (salesCount !== new Set([ownerId, ...collaboratorIds]).size)

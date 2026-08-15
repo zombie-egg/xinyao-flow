@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import { db } from "@/lib/db";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
   let submittedContractNumber: string | undefined;
   try {
     const u = await requirePermission("order:create");
-    if (!u.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
+    if (!hasSalesCapabilities(u.role.code)) throw new Error("FORBIDDEN");
     let form: FormData;
     try {
       form = await req.formData();

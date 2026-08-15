@@ -1,3 +1,4 @@
+import { hasSalesCapabilities } from "@/lib/customer-access";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -13,7 +14,7 @@ export default async function InvoiceApplications({
   searchParams: Promise<{ q?: string }>;
 }) {
   const user = await requireUser();
-  if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
+  if (!hasSalesCapabilities(user.role.code)) throw new Error("FORBIDDEN");
   const params = await searchParams;
   const q = params.q?.trim() || "";
   const orders = await db.order.findMany({

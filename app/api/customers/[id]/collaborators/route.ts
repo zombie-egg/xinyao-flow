@@ -29,7 +29,7 @@ export async function PATCH(
         where: {
           id: { in: collaboratorIds },
           status: "ACTIVE",
-          role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } },
+          role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } },
         },
       });
       if (count !== collaboratorIds.length)

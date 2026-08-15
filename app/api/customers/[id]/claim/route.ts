@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { z } from "zod";
+import { hasSalesCapabilities } from "@/lib/customer-access";
 
 const schema = z.object({
   ownerId: z.string().min(1, "请选择负责销售"),
@@ -14,7 +15,7 @@ export async function POST(
 ) {
   try {
     const user = await requireUser();
-    if (!user.role.code.startsWith("SALES")) throw new Error("FORBIDDEN");
+    if (!hasSalesCapabilities(user.role.code)) throw new Error("FORBIDDEN");
     const { id } = await params;
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success)
@@ -27,7 +28,7 @@ export async function POST(
       where: {
         id: { in: selectedIds },
         status: "ACTIVE",
-        role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } },
+        role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } },
       },
     });
     if (salesCount !== selectedIds.length)

@@ -116,7 +116,7 @@ export async function POST(req: Request) {
       where: {
         id: ownerId,
         status: "ACTIVE",
-        role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } },
+        role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } },
       },
     }) : null;
     if (!isPublicPool && !sales) return fail("负责销售不存在或已停用", "INVALID_SALES_USER");
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
         where: {
           id: { in: collaboratorIds },
           status: "ACTIVE",
-          role: { code: { in: ["SALES_MANAGER", "SALES_EMPLOYEE"] } },
+          role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } },
         },
       });
       if (count !== collaboratorIds.length)
