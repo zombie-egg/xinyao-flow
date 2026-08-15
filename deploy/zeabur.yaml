@@ -96,14 +96,6 @@ spec:
         zeabur_type: user-service
     spec:
       initContainers:
-        - name: fetch-source
-          image: alpine/git:2.49.1
-          command: [sh, -c]
-          args:
-            - rm -rf /src/* /src/.[!.]* /src/..?* 2>/dev/null || true; git clone --depth=1 --branch=main https://github.com/zombie-egg/xinyao-flow.git /src
-          volumeMounts:
-            - name: source
-              mountPath: /src
         - name: build-and-migrate
           image: node:20-bookworm
           workingDir: /src
@@ -142,7 +134,9 @@ spec:
               mountPath: /data/uploads
       volumes:
         - name: source
-          emptyDir: {}
+          hostPath:
+            path: /opt/xinyao-source
+            type: Directory
         - name: uploads
           persistentVolumeClaim:
             claimName: xinyao-uploads
