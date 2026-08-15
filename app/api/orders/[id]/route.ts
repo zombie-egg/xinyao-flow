@@ -146,7 +146,7 @@ export async function PATCH(
       };
     }
 
-    const managerCreated = user.role.code === "SALES_MANAGER";
+    const managerCreated = user.role.code === "SALES_MANAGER" || user.role.code === "ADMIN";
     const approvalStatus = managerCreated
       ? ("PENDING_FINANCE" as const)
       : ("PENDING_SALES_MANAGER" as const);

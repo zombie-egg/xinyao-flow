@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       maxBytes: 10 * 1024 * 1024,
       optimizeImage: true,
     });
-    const managerCreated = customerOwner.role.code === "SALES_MANAGER",
+    const managerCreated = customerOwner.role.code === "SALES_MANAGER" || customerOwner.role.code === "ADMIN",
       approvalStatus = managerCreated
         ? "PENDING_FINANCE"
         : "PENDING_SALES_MANAGER",

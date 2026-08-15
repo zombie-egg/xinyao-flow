@@ -86,7 +86,7 @@ export async function todoCounts(user: {
         technicalStatus: { in: ["PENDING", "PROCESSING"] },
       },
     }));
-  if (role.startsWith("SALES"))
+  if (role.startsWith("SALES") || role === "ADMIN")
     add("/invoice-applications", db.order.count({
       where: {
         historicalSalesName: null,

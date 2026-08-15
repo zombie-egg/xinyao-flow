@@ -28,6 +28,6 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
           sshpass -e scp deploy/zeabur.yaml "$SSH_USER@$SSH_HOST:/tmp/xinyao-zeabur.yaml"
-          tar --exclude=node_modules --exclude=.next --exclude=.git --exclude=.env -czf /tmp/xinyao-source.tgz .
+          tar --exclude=node_modules --exclude=.next --exclude=.git --exclude=.env --exclude=.codex-tmp --exclude=outputs -czf /tmp/xinyao-source.tgz .
           sshpass -e scp /tmp/xinyao-source.tgz "$SSH_USER@$SSH_HOST:/tmp/xinyao-source.tgz"
           sshpass -e ssh "$SSH_USER@$SSH_HOST" 'sudo mkdir -p /opt/xinyao-source && sudo tar -xzf /tmp/xinyao-source.tgz -C /opt/xinyao-source && sudo mkdir -p /home/ubuntu/xinyao-backups && sudo k3s kubectl -n environment-6a6356942007fc25ea3603b2 exec deployment/xinyao-postgres -- pg_dump -U xinyao -d enterprise_ops -Fc > /home/ubuntu/xinyao-backups/pre-deploy-$(date +%Y%m%d-%H%M%S).dump && sudo k3s kubectl apply -f /tmp/xinyao-zeabur.yaml && sudo k3s kubectl -n environment-6a6356942007fc25ea3603b2 rollout restart deployment/xinyao-flow && sudo k3s kubectl -n environment-6a6356942007fc25ea3603b2 rollout status deployment/xinyao-flow --timeout=600s && curl --fail --silent --show-error https://xinyao-sg-08131928.zeabur.app/login >/dev/null'
