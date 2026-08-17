@@ -27,6 +27,10 @@ spec:
       containers:
         - name: postgres
           image: postgres:16-alpine
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
           ports:
             - containerPort: 5432
           env:
@@ -97,7 +101,11 @@ spec:
     spec:
       initContainers:
         - name: build-and-migrate
-          image: node:20-bookworm
+          image: node:22-bookworm
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
           workingDir: /src
           command: [sh, -c]
           args:
@@ -110,7 +118,11 @@ spec:
               mountPath: /src
       containers:
         - name: app
-          image: node:20-bookworm
+          image: node:22-bookworm
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
           workingDir: /src
           command: [npm, run, start, --, -p, "8080"]
           ports:

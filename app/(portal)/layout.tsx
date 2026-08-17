@@ -1,13 +1,13 @@
 import { requireUser } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
-import { db } from "@/lib/db";
+import { cachedCompanySetting } from "@/lib/cached-data";
 export default async function Portal({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const u = await requireUser(),
-    company = await db.companySetting.findUnique({ where: { id: "company" } });
+    company = await cachedCompanySetting();
   return (
     <>
       <Sidebar

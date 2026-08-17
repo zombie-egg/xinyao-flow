@@ -10,6 +10,7 @@ import { Pagination } from "@/components/pagination";
 import { Card } from "@/components/ui/card";
 import { money } from "@/lib/utils";
 import { flexiblePeriodRange } from "@/lib/period-range";
+import { cachedSalesUsers } from "@/lib/cached-data";
 export default async function Orders({
   searchParams,
 }: {
@@ -106,13 +107,13 @@ export default async function Orders({
       ],
     };
   const where = { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };
-  const [items, total, salesUsers, amountTotals, netTotals, paidTotals] = await Promise.all([db.order.findMany({
+  const [items, total, salesUsers, amountTotals, netTotals] = await Promise.all([db.order.findMany({
     where,
-    include: { customer: { include: { collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } }, contract: { select: { netOrderAmount: true } } },
+    select: { id: true, salesUserId: true, orderNumber: true, name: true, amount: true, approvalStatus: true, invoiceStatus: true, invoiceApplicationStatus: true, paymentStatus: true, status: true, createdAt: true, historicalSalesName: true, customer: { select: { id: true, name: true, collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } }, contract: { select: { netOrderAmount: true } } },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
-  }), db.order.count({ where }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["ADMIN","SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } }), db.order.aggregate({ where, _sum: { amount: true } }), db.contract.aggregate({ where: { order: { is: where } }, _sum: { netOrderAmount: true } }), db.order.aggregate({ where, _sum: { paidAmount: true } })]);
+  }), db.order.count({ where }), cachedSalesUsers(), db.order.aggregate({ where, _sum: { amount: true, paidAmount: true } }), db.contract.aggregate({ where: { order: { is: where } }, _sum: { netOrderAmount: true } })]);
   return (
     <>
       <PageHeader
@@ -129,7 +130,7 @@ export default async function Orders({
       />
       <OrderFilters params={params} salesUsers={salesUsers} canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} />
       <DataImportExport entity="orders" canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} hideToolbar />
-      <Card className="mb-5"><div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm"><strong>{u.role.code.startsWith("SALES") ? "订单与业绩" : "订单汇总"}</strong>{selectedPeriodLabel && <span>统计时间：{selectedPeriodLabel}</span>}<span className="text-zinc-500">当前筛选共 {total} 单</span></div><div className="grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">合同金额</p><p className="mt-1 text-xl font-semibold">{money(Number(amountTotals._sum.amount || 0))}</p></div><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">净签单金额</p><p className="mt-1 text-xl font-semibold">{money(Number(netTotals._sum.netOrderAmount || 0))}</p></div><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">已回款</p><p className="mt-1 text-xl font-semibold">{money(Number(paidTotals._sum.paidAmount || 0))}</p></div></div></Card>
+      <Card className="mb-5"><div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm"><strong>{u.role.code.startsWith("SALES") ? "订单与业绩" : "订单汇总"}</strong>{selectedPeriodLabel && <span>统计时间：{selectedPeriodLabel}</span>}<span className="text-zinc-500">当前筛选共 {total} 单</span></div><div className="grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">合同金额</p><p className="mt-1 text-xl font-semibold">{money(Number(amountTotals._sum.amount || 0))}</p></div><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">净签单金额</p><p className="mt-1 text-xl font-semibold">{money(Number(netTotals._sum.netOrderAmount || 0))}</p></div><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">已回款</p><p className="mt-1 text-xl font-semibold">{money(Number(amountTotals._sum.paidAmount || 0))}</p></div></div></Card>
       {items.length ? (
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}

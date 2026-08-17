@@ -7,6 +7,7 @@ import { CustomerFilters } from "@/components/customer-filters";
 import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
 import { flexiblePeriodRange } from "@/lib/period-range";
+import { cachedSalesUsers } from "@/lib/cached-data";
 
 export default async function Customers({
   searchParams,
@@ -87,11 +88,7 @@ export default async function Customers({
       take: pageSize,
     }),
     db.customer.count({ where }),
-    db.user.findMany({
-      where: { status: "ACTIVE", role: { code: { in: ["ADMIN", "SALES_MANAGER", "SALES_EMPLOYEE"] } } },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
+    cachedSalesUsers(),
   ]);
   const canAll = canViewAllCustomers(user.role.code);
   const canCreate = hasSalesCapabilities(user.role.code);
