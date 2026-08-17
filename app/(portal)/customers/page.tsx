@@ -61,6 +61,10 @@ export default async function Customers({
         { collaborators: { some: { user: { name: { contains: q, mode: "insensitive" as const } } } } },
         { contactMethods: { some: { value: { contains: q, mode: "insensitive" as const } } } },
       ] } : {},
+      params.customerName ? { name: { contains: params.customerName, mode: "insensitive" as const } } : {},
+      params.contactQuery ? { contact: { contains: params.contactQuery, mode: "insensitive" as const } } : {},
+      params.phoneQuery ? { phone: { contains: params.phoneQuery } } : {},
+      params.collaboratorId ? { collaborators: { some: { userId: params.collaboratorId } } } : {},
       filters.status ? { status: filters.status as "POTENTIAL" | "INITIAL_CONTACT" | "FOLLOWING" | "WON" | "LOYAL" } : {},
       filters.nature ? { nature: { contains: filters.nature, mode: "insensitive" as const } } : {},
       filters.ownerId ? { OR: [{ ownerId: filters.ownerId }, { collaborators: { some: { userId: filters.ownerId } } }] } : {},
@@ -106,6 +110,7 @@ export default async function Customers({
         canAssignOwner={user.role.code === "ADMIN" || user.role.code === "SALES_MANAGER"}
         canClaimPublic={hasSalesCapabilities(user.role.code)}
         returnTo={params.return}
+        params={params}
       />
       {!items.length && <Empty text={q ? "没有匹配的客户" : "暂无客户"} />}
       <Pagination pathname="/customers" params={params} page={page} pageSize={pageSize} total={total} />

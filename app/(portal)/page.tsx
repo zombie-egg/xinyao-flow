@@ -1,2 +1,51 @@
-import {requireUser} from '@/lib/auth';import {db} from '@/lib/db';import {Card} from '@/components/ui/card';import {PageHeader} from '@/components/page';import {money} from '@/lib/utils';
-export default async function Dashboard(){const u=await requireUser();const admin=u.role.code==='ADMIN',sales=u.role.code.startsWith('SALES'),finance=u.role.code.startsWith('FINANCE');const [employees,attendance,late,leaves,orders,total]=await Promise.all([admin?db.user.count({where:{status:'ACTIVE'}}):0,admin?db.attendance.count({where:{date:{gte:new Date(new Date().setHours(0,0,0,0))}}}):0,admin?db.attendance.count({where:{status:'LATE'}}):0,db.leaveRequest.count({where:admin?{status:'PENDING_ADMIN'}:{userId:u.id}}),db.order.count({where:sales?{salesUserId:u.id}:finance||admin?{}:{status:'TECH_PENDING'}}),db.order.aggregate({where:sales?{salesUserId:u.id}:{},_sum:{amount:true}})]);const cards=admin?[['员工总数',employees],['今日出勤',attendance],['迟到记录',late],['待审批',leaves],['订单总数',orders],['订单总金额',money(Number(total._sum.amount||0))]]:sales?[['我的订单',orders],['订单总金额',money(Number(total._sum.amount||0))],['我的请假',leaves]]:finance?[['订单总数',orders],['订单总金额',money(Number(total._sum.amount||0))],['我的请假',leaves]]:[['待接收订单',orders],['我的请假',leaves]];return <><PageHeader title={`早上好，${u.name}`} description="这里是企业业务的实时概览"/><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{cards.map(([label,value])=><Card key={label as string}><p className="text-sm text-zinc-500">{label}</p><p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p><p className="mt-4 text-xs text-zinc-400">数据来自实时业务库</p></Card>)}</div><Card className="mt-5"><h2 className="font-medium">业务提醒</h2><div className="mt-4 rounded-lg bg-zinc-50 p-5 text-sm text-zinc-500">请及时处理考勤、审批与订单待办。关键状态流转会自动记录操作日志并发送站内通知。</div></Card></>}
+import Link from "next/link";
+import { requireUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/page";
+import { money } from "@/lib/utils";
+
+export default async function Dashboard() {
+  const user = await requireUser();
+  const role = user.role.code;
+  const orderScope = role === "SALES_MANAGER"
+    ? { salesUser: { departmentId: user.departmentId } }
+    : role === "SALES_EMPLOYEE"
+      ? { OR: [{ salesUserId: user.id }, { customer: { collaborators: { some: { userId: user.id } } } }] }
+      : role === "TECH_MANAGER"
+        ? { approvalStatus: "APPROVED" as const }
+        : role === "TECH_EMPLOYEE"
+          ? { approvalStatus: "APPROVED" as const, technicalUserId: user.id }
+          : {};
+  const nowText = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+  const [year, month] = nowText.split("-");
+  const monthStart = new Date(`${year}-${month}-01T00:00:00+08:00`);
+  const nextMonth = new Date(Number(year), Number(month), 1);
+  const monthEnd = new Date(`${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}-01T00:00:00+08:00`);
+  const yearStart = new Date(`${year}-01-01T00:00:00+08:00`);
+  const yearEnd = new Date(`${Number(year) + 1}-01-01T00:00:00+08:00`);
+  const monthWhere = { AND: [orderScope, { createdAt: { gte: monthStart, lt: monthEnd } }] };
+  const yearWhere = { AND: [orderScope, { createdAt: { gte: yearStart, lt: yearEnd } }] };
+  const [monthCount, monthAmount, yearCount, yearAmount, processing, completed, leaves] = await Promise.all([
+    db.order.count({ where: monthWhere }),
+    db.order.aggregate({ where: monthWhere, _sum: { amount: true } }),
+    db.order.count({ where: yearWhere }),
+    db.order.aggregate({ where: yearWhere, _sum: { amount: true } }),
+    db.order.count({ where: { AND: [orderScope, { status: { not: "COMPLETED" } }, { paymentStatus: { not: "COMPLETED" } }] } }),
+    db.order.count({ where: { AND: [orderScope, { OR: [{ status: "COMPLETED" }, { paymentStatus: "COMPLETED" }] }] } }),
+    db.leaveRequest.count({ where: role === "ADMIN" ? { status: "PENDING_ADMIN" } : { userId: user.id } }),
+  ]);
+  const cards = [
+    { label: "本月订单量", value: monthCount, href: `/orders?status=ALL&createdFromMode=month&createdFromValue=${year}-${month}&createdToMode=month&createdToValue=${year}-${month}` },
+    { label: "本月订单金额", value: money(Number(monthAmount._sum.amount || 0)), href: `/orders?status=ALL&createdFromMode=month&createdFromValue=${year}-${month}&createdToMode=month&createdToValue=${year}-${month}` },
+    { label: "本年订单量", value: yearCount, href: `/orders?status=ALL&createdFromMode=year&createdFromValue=${year}&createdToMode=year&createdToValue=${year}` },
+    { label: "本年订单金额", value: money(Number(yearAmount._sum.amount || 0)), href: `/orders?status=ALL&createdFromMode=year&createdFromValue=${year}&createdToMode=year&createdToValue=${year}` },
+    { label: "处理中订单", value: processing, href: "/orders?status=PROCESSING" },
+    { label: "已完成订单", value: completed, href: "/orders?status=COMPLETED" },
+  ];
+  return <>
+    <PageHeader title={`早上好，${user.name}`} description="按本月、本年快速查看订单情况；点击卡片可进入对应订单明细" />
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{cards.map((item) => <Link key={item.label} href={item.href}><Card className="h-full transition hover:-translate-y-0.5 hover:border-zinc-400 hover:shadow-sm"><p className="text-sm text-zinc-500">{item.label}</p><p className="mt-3 text-3xl font-semibold tracking-tight">{item.value}</p><p className="mt-4 text-xs text-zinc-400">点击查看具体订单 →</p></Card></Link>)}</div>
+    <Card className="mt-5"><h2 className="font-medium">业务提醒</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><Link href="/orders?status=PROCESSING" className="rounded-lg bg-zinc-50 p-4 text-sm">待推进订单 <strong className="ml-2">{processing}</strong></Link><Link href={role === "ADMIN" ? "/approvals" : "/leave"} className="rounded-lg bg-zinc-50 p-4 text-sm">请假与审批 <strong className="ml-2">{leaves}</strong></Link><Link href="/customers" className="rounded-lg bg-zinc-50 p-4 text-sm">进入客户管理 →</Link></div></Card>
+  </>;
+}

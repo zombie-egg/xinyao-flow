@@ -170,13 +170,14 @@ function FinanceSelector({
   const financeStaff = staff.filter(
     (item) => item.department?.code === "FINANCE" || item.role.code.startsWith("FINANCE"),
   );
+  const defaultFinanceId = initialId || financeStaff.find((item) => item.name === "郭一铭")?.id || "";
   return (
     <label className="text-sm">
       <RequiredLabel>财务协同人</RequiredLabel>
       <select
         name={name}
         required
-        defaultValue={initialId || ""}
+        defaultValue={defaultFinanceId}
         className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
       >
         <option value="" disabled>请选择财务人员</option>
@@ -216,6 +217,8 @@ export function NewOrderForm({
     [duplicateOrder, setDuplicateOrder] = useState<{ id: string; orderNumber: string; name: string; customerName: string } | null>(null),
     [loading, setLoading] = useState(false),
     [showReceivable, setShowReceivable] = useState(true),
+    [receivableTouched, setReceivableTouched] = useState(Boolean(initial?.receivable)),
+    [receivableAmount, setReceivableAmount] = useState(initial?.receivable ? String(initial.receivable.amount) : initial ? String(initial.amount) : ""),
     [amounts, setAmounts] = useState({
       amount: initial ? String(initial.amount) : "",
       technicalSupportFee: String(initial?.technicalSupportFee ?? 0),
@@ -224,6 +227,7 @@ export function NewOrderForm({
       otherExpense: String(initial?.otherExpense ?? 0),
     }),
     selected = customers.find((c) => c.id === customerId),
+    customerLocked = Boolean(initialCustomerId && selected && !orderId),
     visible = customers.filter((c) =>
       c.category === category && `${c.name}${c.contact}${c.phone}`
         .toLowerCase()
@@ -263,7 +267,10 @@ export function NewOrderForm({
           min="0"
           step="0.01"
           value={amounts[name]}
-          onChange={(e) => setAmounts({ ...amounts, [name]: e.target.value })}
+          onChange={(e) => {
+            setAmounts({ ...amounts, [name]: e.target.value });
+            if (name === "amount" && !receivableTouched) setReceivableAmount(e.target.value);
+          }}
           className="mt-2"
           required={required}
         />
@@ -311,6 +318,7 @@ export function NewOrderForm({
             <select
               name="category"
               value={category}
+              disabled={customerLocked}
               onChange={(event) => {
                 const next = event.target.value as typeof category;
                 setCategory(next);
@@ -323,6 +331,7 @@ export function NewOrderForm({
               <option value="XINYAO_ENVIRONMENT">心邀环境</option>
               <option value="OCCUPATIONAL_HEALTH">职业卫生</option>
             </select>
+            {customerLocked && <input type="hidden" name="category" value={category} />}
           </label>
           <label className="text-sm">
             <RequiredLabel>业务类型</RequiredLabel>
@@ -357,7 +366,7 @@ export function NewOrderForm({
           </label>
           <label className="text-sm md:col-span-2">
             <RequiredLabel>客户名称</RequiredLabel>
-            <Input
+            {customerLocked ? <Input value={selected?.name || ""} readOnly className="mt-2 bg-zinc-50" /> : <><Input
               value={customerSearch}
               onChange={(e) => setCustomerSearch(e.target.value)}
               placeholder="搜索客户名称、联系人或电话"
@@ -383,7 +392,7 @@ export function NewOrderForm({
               >
                 客户不存在？创建客户
               </Link>
-            </div>
+            </div></>}
           </label>
         </div>
         {selected && (
@@ -398,17 +407,6 @@ export function NewOrderForm({
       <Card>
         <h2 className="font-medium">第二步：金额与费用</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-sm">
-            产品合计
-            <Input
-              name="productTotal"
-              type="number"
-              min="0"
-              step="0.01"
-              className="mt-2"
-              defaultValue={initial?.productTotal}
-            />
-          </label>
           {amountInput("amount", "合同金额", true)}
           {amountInput("technicalSupportFee", "技术支持费用", true)}
           {amountInput("outsourcingFee", "外包费用", true)}
@@ -570,7 +568,8 @@ export function NewOrderForm({
               min="0.01"
               step="0.01"
               className="mt-2"
-              defaultValue={initial?.receivable?.amount}
+              value={receivableAmount}
+              onChange={(event) => { setReceivableTouched(true); setReceivableAmount(event.target.value); }}
               required
             />
           </label>
