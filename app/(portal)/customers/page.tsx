@@ -35,8 +35,12 @@ export default async function Customers({
     updatedFrom: params.updatedFrom,
     updatedTo: params.updatedTo,
   };
-  const createdRange = periodRange(params.createdMode, filters.createdFrom, filters.createdTo);
-  const updatedRange = periodRange(params.updatedMode, filters.updatedFrom, filters.updatedTo);
+  const createdRange = params.createdMonth
+    ? periodRange("month", params.createdMonth, params.createdMonth)
+    : periodRange(params.createdMode, filters.createdFrom, filters.createdTo);
+  const updatedRange = params.updatedMonth
+    ? periodRange("month", params.updatedMonth, params.updatedMonth)
+    : periodRange(params.updatedMode, filters.updatedFrom, filters.updatedTo);
   const where = {
     AND: [
       access,

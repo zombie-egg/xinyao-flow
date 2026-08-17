@@ -27,11 +27,11 @@ export function PeriodRangeFields({
       </label>
       <label className="text-xs text-zinc-400">
         <span className="mb-1 block">{label}（开始）</span>
-        <input name={`${prefix}From`} type={type} min={mode === "year" ? 2000 : undefined} max={mode === "year" ? 2100 : undefined} defaultValue={params[`${prefix}From`]} placeholder={placeholder} className={fieldClass} />
+        <input key={`${mode}-from`} name={`${prefix}From`} type={type} min={mode === "year" ? 2000 : undefined} max={mode === "year" ? 2100 : undefined} defaultValue={(params[`${prefix}Mode`] || "date") === mode ? params[`${prefix}From`] : undefined} placeholder={placeholder} className={fieldClass} />
       </label>
       <label className="text-xs text-zinc-400">
         <span className="mb-1 block">{label}（结束）</span>
-        <input name={`${prefix}To`} type={type} min={mode === "year" ? 2000 : undefined} max={mode === "year" ? 2100 : undefined} defaultValue={params[`${prefix}To`]} placeholder={placeholder} className={fieldClass} />
+        <input key={`${mode}-to`} name={`${prefix}To`} type={type} min={mode === "year" ? 2000 : undefined} max={mode === "year" ? 2100 : undefined} defaultValue={(params[`${prefix}Mode`] || "date") === mode ? params[`${prefix}To`] : undefined} placeholder={placeholder} className={fieldClass} />
       </label>
     </>
   );
