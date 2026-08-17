@@ -5,9 +5,9 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { customerStatusText } from "@/lib/customer-labels";
-import { PeriodRangeFields } from "./period-range-fields";
+import { PeriodFilterFields } from "./period-filter-fields";
 
-const advancedKeys = ["q", "ownership", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdMode", "createdFrom", "createdTo", "updatedMode", "updatedFrom", "updatedTo"];
+const advancedKeys = ["q", "ownership", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdYear", "createdMonth", "createdDate", "updatedYear", "updatedMonth", "updatedDate"];
 
 export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canCreate: boolean; showPublicPool: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));
@@ -42,8 +42,8 @@ export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool 
           <Input name="nature" defaultValue={params.nature} placeholder="客户性质" />
           <Input name="industry" defaultValue={params.industry} placeholder="客户行业" />
           <select name="businessLine" defaultValue={params.businessLine || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部业务线</option><option value="ENVIRONMENTAL_MONITORING">环境检测</option><option value="PUBLIC_HEALTH">公共卫生</option><option value="OCCUPATIONAL_HEALTH">职业卫生</option></select>
-          <PeriodRangeFields prefix="created" label="创建时间" params={params} />
-          <PeriodRangeFields prefix="updated" label="更新时间" params={params} />
+          <PeriodFilterFields prefix="created" label="创建" params={params} />
+          <PeriodFilterFields prefix="updated" label="更新" params={params} />
         </div>
         <div className="mt-3 flex gap-2"><Button type="submit">筛选</Button><Link href="/customers" className="inline-flex h-10 items-center rounded-lg border px-4 text-sm">清除筛选</Link></div>
       </form>}

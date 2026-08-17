@@ -42,10 +42,20 @@ export default async function Orders({
   const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const createdRange = periodRange(params.createdMode, params.createdFrom, params.createdTo);
-  const selectedMonthLabel = params.createdMode === "month" && params.createdFrom
-    ? `${params.createdFrom.slice(0, 4)}年${Number(params.createdFrom.slice(5, 7))}月${params.createdTo && params.createdTo !== params.createdFrom ? ` 至 ${params.createdTo.slice(0, 4)}年${Number(params.createdTo.slice(5, 7))}月` : ""}`
-    : null;
+  const createdRange = params.createdDate
+    ? periodRange("date", params.createdDate, params.createdDate)
+    : params.createdMonth
+      ? periodRange("month", params.createdMonth, params.createdMonth)
+      : params.createdYear
+        ? periodRange("year", params.createdYear, params.createdYear)
+        : null;
+  const selectedPeriodLabel = params.createdDate
+    ? params.createdDate
+    : params.createdMonth
+      ? `${params.createdMonth.slice(0, 4)}年${Number(params.createdMonth.slice(5, 7))}月`
+      : params.createdYear
+        ? `${params.createdYear}年`
+        : null;
   const statusWhere =
       statusFilter === "COMPLETED"
         ? {
@@ -121,7 +131,7 @@ export default async function Orders({
       />
       <OrderFilters params={params} salesUsers={salesUsers} canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} />
       <DataImportExport entity="orders" canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} hideToolbar />
-      <Card className="mb-5 flex flex-wrap items-center gap-x-8 gap-y-2 py-4 text-sm">{selectedMonthLabel && <span className="font-medium">统计月份：{selectedMonthLabel}</span>}<span className="text-zinc-500">当前筛选共 {total} 单</span><span>合同金额合计：<strong>{money(Number(amountTotals._sum.amount || 0))}</strong></span><span>净签单金额合计：<strong>{money(Number(netTotals._sum.netOrderAmount || 0))}</strong></span></Card>
+      <Card className="mb-5 flex flex-wrap items-center gap-x-8 gap-y-2 py-4 text-sm">{selectedPeriodLabel && <span className="font-medium">统计时间：{selectedPeriodLabel}</span>}<span className="text-zinc-500">当前筛选共 {total} 单</span><span>合同金额合计：<strong>{money(Number(amountTotals._sum.amount || 0))}</strong></span><span>净签单金额合计：<strong>{money(Number(netTotals._sum.netOrderAmount || 0))}</strong></span></Card>
       {items.length ? (
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}

@@ -30,13 +30,15 @@ export default async function Customers({
     ownerId: params.ownerId,
     businessLine: params.businessLine,
     industry: params.industry,
-    createdFrom: params.createdFrom,
-    createdTo: params.createdTo,
-    updatedFrom: params.updatedFrom,
-    updatedTo: params.updatedTo,
+    createdYear: params.createdYear,
+    createdMonth: params.createdMonth,
+    createdDate: params.createdDate,
+    updatedYear: params.updatedYear,
+    updatedMonth: params.updatedMonth,
+    updatedDate: params.updatedDate,
   };
-  const createdRange = periodRange(params.createdMode, filters.createdFrom, filters.createdTo);
-  const updatedRange = periodRange(params.updatedMode, filters.updatedFrom, filters.updatedTo);
+  const createdRange = filters.createdDate ? periodRange("date", filters.createdDate, filters.createdDate) : filters.createdMonth ? periodRange("month", filters.createdMonth, filters.createdMonth) : filters.createdYear ? periodRange("year", filters.createdYear, filters.createdYear) : null;
+  const updatedRange = filters.updatedDate ? periodRange("date", filters.updatedDate, filters.updatedDate) : filters.updatedMonth ? periodRange("month", filters.updatedMonth, filters.updatedMonth) : filters.updatedYear ? periodRange("year", filters.updatedYear, filters.updatedYear) : null;
   const where = {
     AND: [
       access,
