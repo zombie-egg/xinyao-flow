@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { PageHeader, Empty } from "@/components/page";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,7 @@ export default async function Performance({ searchParams }: { searchParams: Prom
   const query = await searchParams;
   const canAll = user.role.code === "ADMIN" || user.role.code.startsWith("FINANCE");
   const self = user.role.code.startsWith("SALES");
+  if (self) redirect("/orders");
   if (!canAll && !self) throw new Error("FORBIDDEN");
   const range = statisticsDateRange(query.start, query.end);
   const where = statisticsOrderWhere({ ...range, ...(self ? { salesUserId: user.id } : {}) });

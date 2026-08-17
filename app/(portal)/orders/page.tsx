@@ -9,7 +9,7 @@ import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
 import { Card } from "@/components/ui/card";
 import { money } from "@/lib/utils";
-import { periodRange } from "@/lib/period-range";
+import { flexiblePeriodRange } from "@/lib/period-range";
 export default async function Orders({
   searchParams,
 }: {
@@ -42,10 +42,10 @@ export default async function Orders({
   const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const selectedRange = periodRange("date", params.createdFrom, params.createdTo);
+  const selectedRange = flexiblePeriodRange(params.createdFromMode, params.createdFromValue, params.createdToMode, params.createdToValue);
   const createdTimeWhere = selectedRange ? { createdAt: selectedRange } : {};
-  const selectedPeriodLabel = params.createdFrom || params.createdTo
-    ? `${params.createdFrom || params.createdTo} 至 ${params.createdTo || params.createdFrom}`
+  const selectedPeriodLabel = params.createdFromValue || params.createdToValue
+    ? `${params.createdFromValue || "不限"} 至 ${params.createdToValue || "不限"}`
     : null;
   const statusWhere =
       statusFilter === "COMPLETED"
@@ -89,6 +89,9 @@ export default async function Orders({
     extraWhere = {
       AND: [
         params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { salesUserId: u.id } : params.quick === "collaborative" ? { customer: { collaborators: { some: { userId: u.id } } } } : {},
+        params.orderNumberQuery ? { orderNumber: { contains: params.orderNumberQuery, mode: "insensitive" as const } } : {},
+        params.orderNameQuery ? { name: { contains: params.orderNameQuery, mode: "insensitive" as const } } : {},
+        params.customerQuery ? { customer: { name: { contains: params.customerQuery, mode: "insensitive" as const } } } : {},
         params.category ? { category: params.category as "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH" } : {},
         params.salesUserId ? { salesUserId: params.salesUserId } : {},
         params.contractStatus ? { contract: { signingStatus: params.contractStatus as "SIGNED" | "PENDING_SIGNATURE" } } : {},
@@ -100,13 +103,13 @@ export default async function Orders({
       ],
     };
   const where = { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };
-  const [items, total, salesUsers, amountTotals, netTotals] = await Promise.all([db.order.findMany({
+  const [items, total, salesUsers, amountTotals, netTotals, paidTotals] = await Promise.all([db.order.findMany({
     where,
     include: { customer: { include: { collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } }, contract: { select: { netOrderAmount: true } } },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
-  }), db.order.count({ where }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["ADMIN","SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } }), db.order.aggregate({ where, _sum: { amount: true } }), db.contract.aggregate({ where: { order: { is: where } }, _sum: { netOrderAmount: true } })]);
+  }), db.order.count({ where }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["ADMIN","SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } }), db.order.aggregate({ where, _sum: { amount: true } }), db.contract.aggregate({ where: { order: { is: where } }, _sum: { netOrderAmount: true } }), db.order.aggregate({ where, _sum: { paidAmount: true } })]);
   return (
     <>
       <PageHeader
@@ -123,11 +126,13 @@ export default async function Orders({
       />
       <OrderFilters params={params} salesUsers={salesUsers} canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} />
       <DataImportExport entity="orders" canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} hideToolbar />
-      <Card className="mb-5 flex flex-wrap items-center gap-x-8 gap-y-2 py-4 text-sm">{selectedPeriodLabel && <span className="font-medium">统计时间：{selectedPeriodLabel}</span>}<span className="text-zinc-500">当前筛选共 {total} 单</span><span>合同金额合计：<strong>{money(Number(amountTotals._sum.amount || 0))}</strong></span><span>净签单金额合计：<strong>{money(Number(netTotals._sum.netOrderAmount || 0))}</strong></span></Card>
+      <Card className="mb-5"><div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm"><strong>{u.role.code.startsWith("SALES") ? "订单与业绩" : "订单汇总"}</strong>{selectedPeriodLabel && <span>统计时间：{selectedPeriodLabel}</span>}<span className="text-zinc-500">当前筛选共 {total} 单</span></div><div className="grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">合同金额</p><p className="mt-1 text-xl font-semibold">{money(Number(amountTotals._sum.amount || 0))}</p></div><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">净签单金额</p><p className="mt-1 text-xl font-semibold">{money(Number(netTotals._sum.netOrderAmount || 0))}</p></div><div className="rounded-lg bg-zinc-50 p-3"><p className="text-xs text-zinc-500">已回款</p><p className="mt-1 text-xl font-semibold">{money(Number(paidTotals._sum.paidAmount || 0))}</p></div></div></Card>
       {items.length ? (
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}
           invoiceApplicantId={hasSalesCapabilities(u.role.code) ? u.id : undefined}
+          params={params}
+          salesUsers={salesUsers}
         />
       ) : (
         <>

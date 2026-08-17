@@ -6,7 +6,7 @@ import { canViewAllCustomers, customerAccessWhere, hasSalesCapabilities } from "
 import { CustomerFilters } from "@/components/customer-filters";
 import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
-import { periodRange } from "@/lib/period-range";
+import { flexiblePeriodRange } from "@/lib/period-range";
 
 export default async function Customers({
   searchParams,
@@ -31,13 +31,17 @@ export default async function Customers({
     ownerId: params.ownerId,
     businessLine: params.businessLine,
     industry: params.industry,
-    createdFrom: params.createdFrom,
-    createdTo: params.createdTo,
-    updatedFrom: params.updatedFrom,
-    updatedTo: params.updatedTo,
+    createdFromMode: params.createdFromMode,
+    createdFromValue: params.createdFromValue,
+    createdToMode: params.createdToMode,
+    createdToValue: params.createdToValue,
+    updatedFromMode: params.updatedFromMode,
+    updatedFromValue: params.updatedFromValue,
+    updatedToMode: params.updatedToMode,
+    updatedToValue: params.updatedToValue,
   };
-  const createdRange = periodRange("date", filters.createdFrom, filters.createdTo);
-  const updatedRange = periodRange("date", filters.updatedFrom, filters.updatedTo);
+  const createdRange = flexiblePeriodRange(filters.createdFromMode, filters.createdFromValue, filters.createdToMode, filters.createdToValue);
+  const updatedRange = flexiblePeriodRange(filters.updatedFromMode, filters.updatedFromValue, filters.updatedToMode, filters.updatedToValue);
   const createdTimeWhere = createdRange ? { createdAt: createdRange } : {};
   const updatedTimeWhere = updatedRange ? { updatedAt: updatedRange } : {};
   const where = {

@@ -16,7 +16,7 @@ import { orderFormSchema } from "../lib/order-input";
 import { canEditCustomerProfile, canOperateCustomerSalesFlow, customerAccessWhere, customerBusinessAccess } from "../lib/customer-access";
 import { customerSchema } from "../lib/customer-input";
 import { statisticsDateRange, statisticsOrderWhere } from "../lib/statistics";
-import { periodRange } from "../lib/period-range";
+import { flexiblePeriodRange, periodRange } from "../lib/period-range";
 describe("考勤距离", () => {
   it("同一坐标距离为 0", () =>
     expect(
@@ -302,5 +302,10 @@ describe("列表时间筛选", () => {
     const range = periodRange("year", "2026", "2026");
     expect(range?.gte?.toISOString()).toBe("2025-12-31T16:00:00.000Z");
     expect(range?.lt?.toISOString()).toBe("2026-12-31T16:00:00.000Z");
+  });
+  it("起止时间可以混合使用年份、月份和日期精度", () => {
+    const range = flexiblePeriodRange("month", "2025-09", "month", "2026-03");
+    expect(range?.gte?.toISOString()).toBe("2025-08-31T16:00:00.000Z");
+    expect(range?.lt?.toISOString()).toBe("2026-03-31T16:00:00.000Z");
   });
 });

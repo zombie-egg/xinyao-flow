@@ -4,6 +4,18 @@ const startOf = (value: string, mode: string) => {
   return new Date(`${value}T00:00:00+08:00`);
 };
 
+export function flexiblePeriodRange(
+  fromMode: string | undefined,
+  fromValue: string | undefined,
+  toMode: string | undefined,
+  toValue: string | undefined,
+) {
+  const range: { gte?: Date; lt?: Date } = {};
+  if (fromValue) range.gte = startOf(fromValue, fromMode || "date");
+  if (toValue) range.lt = endOf(toValue, toMode || "date");
+  return Object.keys(range).length ? range : null;
+}
+
 const endOf = (value: string, mode: string) => {
   if (mode === "year") return new Date(`${Number(value) + 1}-01-01T00:00:00+08:00`);
   if (mode === "month") {

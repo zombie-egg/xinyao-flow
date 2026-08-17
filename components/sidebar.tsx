@@ -50,7 +50,6 @@ const menus = {
     ["/orders/new", "新建订单", FilePlus2],
     ["/orders", "我的订单", ShoppingCart],
     ["/invoice-applications", "开票申请", ReceiptText],
-    ["/performance", "我的业绩", Trophy],
     ["/me", "我的", UserRound],
   ],
   SALES_MANAGER: [
@@ -65,7 +64,6 @@ const menus = {
     ["/orders", "订单管理", ShoppingCart],
     ["/invoice-applications", "开票申请", ReceiptText],
     ["/reviews", "合同审核", ClipboardCheck],
-    ["/performance", "我的业绩", Trophy],
     ["/me", "我的", UserRound],
   ],
   TECH_EMPLOYEE: [

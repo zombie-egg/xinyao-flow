@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { PeriodFilterFields } from "./period-filter-fields";
 
-const advancedKeys = ["q", "category", "salesUserId", "approvalStatus", "contractStatus", "invoiceStage", "paymentStage", "amountMin", "amountMax", "createdFrom", "createdTo"];
+const advancedKeys = ["q", "category", "salesUserId", "approvalStatus", "contractStatus", "invoiceStage", "paymentStage", "amountMin", "amountMax", "createdFromValue", "createdToValue"];
 
 export function OrderFilters({ params, salesUsers, canImport }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canImport: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));

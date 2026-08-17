@@ -7,7 +7,7 @@ import { Input } from "./ui/input";
 import { customerStatusText } from "@/lib/customer-labels";
 import { PeriodFilterFields } from "./period-filter-fields";
 
-const advancedKeys = ["q", "category", "ownership", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdFrom", "createdTo", "updatedFrom", "updatedTo"];
+const advancedKeys = ["q", "category", "ownership", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdFromValue", "createdToValue", "updatedFromValue", "updatedToValue"];
 
 export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canCreate: boolean; showPublicPool: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));
