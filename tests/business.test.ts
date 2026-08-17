@@ -16,6 +16,7 @@ import { orderFormSchema } from "../lib/order-input";
 import { canEditCustomerProfile, canOperateCustomerSalesFlow, customerAccessWhere, customerBusinessAccess } from "../lib/customer-access";
 import { customerSchema } from "../lib/customer-input";
 import { statisticsDateRange, statisticsOrderWhere } from "../lib/statistics";
+import { periodRange } from "../lib/period-range";
 describe("考勤距离", () => {
   it("同一坐标距离为 0", () =>
     expect(
@@ -284,5 +285,22 @@ describe("业务统计", () => {
       status: { not: "CANCELLED" },
       contract: { contractDate: { gte: range.start, lte: range.end } },
     });
+  });
+});
+describe("列表时间筛选", () => {
+  it("具体日期包含完整上海自然日", () => {
+    const range = periodRange("date", "2026-08-01", "2026-08-31");
+    expect(range?.gte?.toISOString()).toBe("2026-07-31T16:00:00.000Z");
+    expect(range?.lt?.toISOString()).toBe("2026-08-31T16:00:00.000Z");
+  });
+  it("月份筛选正确跨年", () => {
+    const range = periodRange("month", "2026-12", "2026-12");
+    expect(range?.gte?.toISOString()).toBe("2026-11-30T16:00:00.000Z");
+    expect(range?.lt?.toISOString()).toBe("2026-12-31T16:00:00.000Z");
+  });
+  it("年份筛选包含完整年份", () => {
+    const range = periodRange("year", "2026", "2026");
+    expect(range?.gte?.toISOString()).toBe("2025-12-31T16:00:00.000Z");
+    expect(range?.lt?.toISOString()).toBe("2026-12-31T16:00:00.000Z");
   });
 });

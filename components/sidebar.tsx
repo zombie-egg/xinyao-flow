@@ -143,6 +143,7 @@ export function Sidebar({
         setTodoBadges(body.data);
       }
     };
+    void update();
     const timer = window.setInterval(update, 60000);
     document.addEventListener("visibilitychange", update);
     return () => {

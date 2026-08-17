@@ -7,6 +7,9 @@ import { OrderList } from "@/components/order-list";
 import { OrderFilters } from "@/components/order-filters";
 import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
+import { Card } from "@/components/ui/card";
+import { money } from "@/lib/utils";
+import { periodRange } from "@/lib/period-range";
 export default async function Orders({
   searchParams,
 }: {
@@ -39,6 +42,7 @@ export default async function Orders({
   const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  const createdRange = periodRange(params.createdMode, params.createdFrom, params.createdTo);
   const statusWhere =
       statusFilter === "COMPLETED"
         ? {
@@ -87,17 +91,17 @@ export default async function Orders({
         params.invoiceStage === "TO_APPLY" ? { invoiceApplicationStatus: "PENDING" as const } : params.invoiceStage === "TO_INVOICE" ? { invoiceApplicationStatus: "COMPLETED" as const, invoiceStatus: "PENDING" as const } : params.invoiceStage === "INVOICED" ? { invoiceStatus: "COMPLETED" as const } : {},
         params.paymentStage ? { paymentStatus: params.paymentStage as "PENDING"|"PARTIAL"|"COMPLETED" } : {},
         params.amountMin || params.amountMax ? { amount: { ...(params.amountMin ? { gte: Number(params.amountMin) } : {}), ...(params.amountMax ? { lte: Number(params.amountMax) } : {}) } } : {},
-        params.createdFrom || params.createdTo ? { createdAt: { ...(params.createdFrom ? { gte: new Date(`${params.createdFrom}T00:00:00+08:00`) } : {}), ...(params.createdTo ? { lte: new Date(`${params.createdTo}T23:59:59+08:00`) } : {}) } } : {},
+        createdRange ? { createdAt: createdRange } : {},
       ],
     };
   const where = { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };
-  const [items, total, salesUsers] = await Promise.all([db.order.findMany({
+  const [items, total, salesUsers, amountTotals, netTotals] = await Promise.all([db.order.findMany({
     where,
-    include: { customer: { include: { collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } } },
+    include: { customer: { include: { collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } }, contract: { select: { netOrderAmount: true } } },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
-  }), db.order.count({ where }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
+  }), db.order.count({ where }), db.user.findMany({ where: { status: "ACTIVE", role: { code: { in: ["ADMIN","SALES_MANAGER","SALES_EMPLOYEE"] } } }, select: { id: true, name: true }, orderBy: { name: "asc" } }), db.order.aggregate({ where, _sum: { amount: true } }), db.contract.aggregate({ where: { order: { is: where } }, _sum: { netOrderAmount: true } })]);
   return (
     <>
       <PageHeader
@@ -114,6 +118,7 @@ export default async function Orders({
       />
       <OrderFilters params={params} salesUsers={salesUsers} canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} />
       <DataImportExport entity="orders" canImport={u.role.code === "ADMIN" || u.role.code === "SALES_MANAGER"} hideToolbar />
+      <Card className="mb-5 flex flex-wrap items-center gap-x-8 gap-y-2 py-4 text-sm"><span className="text-zinc-500">当前筛选共 {total} 单</span><span>合同金额合计：<strong>{money(Number(amountTotals._sum.amount || 0))}</strong></span><span>净签单金额合计：<strong>{money(Number(netTotals._sum.netOrderAmount || 0))}</strong></span></Card>
       {items.length ? (
         <OrderList
           items={items.map((item) => ({ ...item, customerCollaboratorIds: item.customer.collaborators.map((x) => x.userId) }))}

@@ -28,7 +28,7 @@ export function Pagination({
       <p className="text-zinc-500">
         共 {total} 条 · 第 {page}/{pages} 页
       </p>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {page > 1 && (
           <Link href={href(page - 1)} className="rounded-lg border bg-white px-4 py-2 hover:bg-zinc-50">
             上一页
@@ -39,6 +39,11 @@ export function Pagination({
             下一页
           </Link>
         )}
+        <form method="get" action={pathname} className="flex items-center gap-2">
+          {Object.entries(params).filter(([key, value]) => key !== "page" && Boolean(value)).map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />)}
+          <input name="page" type="number" min={1} max={pages} defaultValue={page} aria-label="跳转页码" className="h-9 w-20 rounded-lg border bg-white px-3 text-center" />
+          <button className="h-9 rounded-lg border bg-white px-3 hover:bg-zinc-50">跳转</button>
+        </form>
       </div>
     </nav>
   );

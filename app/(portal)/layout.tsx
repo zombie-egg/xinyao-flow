@@ -1,21 +1,17 @@
 import { requireUser } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { db } from "@/lib/db";
-import { todoCounts } from "@/lib/todo-counts";
 export default async function Portal({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const u = await requireUser(),
-    [company, badges] = await Promise.all([
-      db.companySetting.findUnique({ where: { id: "company" } }),
-      todoCounts(u),
-    ]);
+    company = await db.companySetting.findUnique({ where: { id: "company" } });
   return (
     <>
       <Sidebar
-        badges={badges}
+        badges={{}}
         company={{
           name: company?.companyName || "企业",
           logoUrl: company?.logoUrl || null,

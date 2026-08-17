@@ -4,8 +4,9 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { PeriodRangeFields } from "./period-range-fields";
 
-const advancedKeys = ["q", "salesUserId", "approvalStatus", "contractStatus", "invoiceStage", "paymentStage", "amountMin", "amountMax", "createdFrom", "createdTo"];
+const advancedKeys = ["q", "salesUserId", "approvalStatus", "contractStatus", "invoiceStage", "paymentStage", "amountMin", "amountMax", "createdMode", "createdFrom", "createdTo"];
 
 export function OrderFilters({ params, salesUsers, canImport }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canImport: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));
@@ -47,8 +48,7 @@ export function OrderFilters({ params, salesUsers, canImport }: { params: Record
           <select name="paymentStage" defaultValue={params.paymentStage || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部回款状态</option><option value="PENDING">未回款</option><option value="PARTIAL">部分回款</option><option value="COMPLETED">已回款</option></select>
           <Input name="amountMin" type="number" step="0.01" defaultValue={params.amountMin} placeholder="最低金额" />
           <Input name="amountMax" type="number" step="0.01" defaultValue={params.amountMax} placeholder="最高金额" />
-          <label className="text-xs text-zinc-400"><span className="mb-1 block">订单创建时间（开始）</span><Input name="createdFrom" type="date" defaultValue={params.createdFrom} aria-label="订单创建时间开始" /></label>
-          <label className="text-xs text-zinc-400"><span className="mb-1 block">订单创建时间（结束）</span><Input name="createdTo" type="date" defaultValue={params.createdTo} aria-label="订单创建时间结束" /></label>
+          <PeriodRangeFields prefix="created" label="订单创建时间" params={params} />
         </div>
         <div className="mt-3 flex gap-2"><Button type="submit">筛选</Button><Link href="/orders?status=ALL" className="inline-flex h-10 items-center rounded-lg border px-4 text-sm">清除筛选</Link></div>
       </form>}

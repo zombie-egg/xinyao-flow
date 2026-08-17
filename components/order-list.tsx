@@ -12,6 +12,7 @@ type Item = {
   orderNumber: string | null;
   name: string;
   amount: unknown;
+  contract: { netOrderAmount: unknown };
   approvalStatus: string;
   invoiceStatus: string;
   invoiceApplicationStatus: string;
@@ -42,6 +43,7 @@ export function OrderList({
                 "客户",
                 "销售人员",
                 "金额",
+                "净签单金额",
                 "审核状态",
                 "订单状态",
                 "创建时间",
@@ -68,6 +70,7 @@ export function OrderList({
                 <td className="px-4">{x.customer.name}</td>
                 <td className="px-4">{x.historicalSalesName || x.salesUser.name}</td>
                 <td className="px-4">{money(Number(x.amount))}</td>
+                <td className="px-4">{money(Number(x.contract.netOrderAmount))}</td>
                 <td className="px-4">
                   <Badge>
                     {approvalStatusText[x.approvalStatus] || "未知状态"}

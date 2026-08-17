@@ -6,6 +6,7 @@ import { canViewAllCustomers, customerAccessWhere, hasSalesCapabilities } from "
 import { CustomerFilters } from "@/components/customer-filters";
 import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
+import { periodRange } from "@/lib/period-range";
 
 export default async function Customers({
   searchParams,
@@ -34,6 +35,8 @@ export default async function Customers({
     updatedFrom: params.updatedFrom,
     updatedTo: params.updatedTo,
   };
+  const createdRange = periodRange(params.createdMode, filters.createdFrom, filters.createdTo);
+  const updatedRange = periodRange(params.updatedMode, filters.updatedFrom, filters.updatedTo);
   const where = {
     AND: [
       access,
@@ -55,8 +58,8 @@ export default async function Customers({
       filters.ownerId ? { OR: [{ ownerId: filters.ownerId }, { collaborators: { some: { userId: filters.ownerId } } }] } : {},
       filters.businessLine ? { businessLine: filters.businessLine as "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH" } : {},
       filters.industry ? { industry: { contains: filters.industry, mode: "insensitive" as const } } : {},
-      filters.createdFrom || filters.createdTo ? { createdAt: { ...(filters.createdFrom ? { gte: new Date(`${filters.createdFrom}T00:00:00+08:00`) } : {}), ...(filters.createdTo ? { lte: new Date(`${filters.createdTo}T23:59:59+08:00`) } : {}) } } : {},
-      filters.updatedFrom || filters.updatedTo ? { updatedAt: { ...(filters.updatedFrom ? { gte: new Date(`${filters.updatedFrom}T00:00:00+08:00`) } : {}), ...(filters.updatedTo ? { lte: new Date(`${filters.updatedTo}T23:59:59+08:00`) } : {}) } } : {},
+      createdRange ? { createdAt: createdRange } : {},
+      updatedRange ? { updatedAt: updatedRange } : {},
     ],
   };
   const [items, total, salesUsers] = await Promise.all([
