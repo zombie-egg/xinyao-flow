@@ -50,8 +50,8 @@ async function ensureCustomer(name, fallbackOwnerName = "") {
   }
   const originals = await db.customer.findMany({ where: { category: "XINYAO_ENVIRONMENT", nameNormalized: key }, orderBy: { updatedAt: "desc" }, take: 3 });
   const original = originals.length === 1 ? originals[0] : null;
-  if (!sourceRow && !original) {
-    result.customersHeld.push({ name, reason: originals.length > 1 ? "心邀环境存在多个同名客户，无法唯一复制" : "客户表和现有库均无唯一资料" });
+  if (!sourceRow && originals.length > 1) {
+    result.customersHeld.push({ name, reason: "心邀环境存在多个同名客户，无法唯一复制" });
     return null;
   }
   const ownerName = split(sourceRow?.["跟进人"] || fallbackOwnerName)[0] || "";
@@ -64,7 +64,7 @@ async function ensureCustomer(name, fallbackOwnerName = "") {
     data: {
       id: id("occ_customer", `${key}:${phoneNorm(phone)}`),
       category: "OCCUPATIONAL_HEALTH",
-      name: text(sourceRow?.["客户名称"]) || original.name,
+      name: text(sourceRow?.["客户名称"]) || original?.name || text(name),
       nameNormalized: key,
       contact,
       contactNormalized: norm(contact),
@@ -72,11 +72,11 @@ async function ensureCustomer(name, fallbackOwnerName = "") {
       phoneNormalized: phoneNorm(phone),
       address: address(sourceRow || {}) || original?.address,
       contactInfo: [text(sourceRow?.["添加联系人/邮箱"]), text(sourceRow?.["添加联系人/部门"]), text(sourceRow?.["添加联系人/职务"])].filter(Boolean).join("；") || original?.contactInfo,
-      remark: [text(sourceRow?.["添加联系人/备注"]), text(sourceRow?.["客户阶段"]) ? `客户阶段：${text(sourceRow["客户阶段"])}` : ""].filter(Boolean).join("；") || original?.remark,
-      businessLine: sourceRow ? businessType(sourceRow["业务线"]) : original.businessLine,
+      remark: [text(sourceRow?.["添加联系人/备注"]), text(sourceRow?.["客户阶段"]) ? `客户阶段：${text(sourceRow["客户阶段"])}` : ""].filter(Boolean).join("；") || original?.remark || "源订单未提供客户联系方式，待补录",
+      businessLine: sourceRow ? businessType(sourceRow["业务线"]) : original?.businessLine || "OCCUPATIONAL_HEALTH",
       monitoringType: text(sourceRow?.["职业卫生检测类型"] || sourceRow?.["环境检测类型"] || sourceRow?.["公共卫生检测类型"]) || original?.monitoringType,
       industry: text(sourceRow?.["客户行业"]) || original?.industry || "未填写",
-      status: sourceRow ? status(sourceRow["客户状态"]) : original.status,
+      status: sourceRow ? status(sourceRow["客户状态"]) : original?.status || "POTENTIAL",
       nature: text(sourceRow?.["客户性质"]) || original?.nature,
       ownerId: owner?.id || original?.ownerId || null,
       pendingOwnerName: departedOwner,
