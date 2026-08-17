@@ -17,7 +17,7 @@ export default async function Orders({
 }) {
   const u = await requireUser(),
     params = await searchParams,
-    pageSize = 50,
+    pageSize = 25,
     page = Math.max(1, Number(params.page) || 1),
     q = params.q?.trim() || "",
     statusFilter =

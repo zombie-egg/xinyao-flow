@@ -15,7 +15,7 @@ export default async function Customers({
 }) {
   const user = await requirePermission("customer:view");
   const params = await searchParams;
-  const pageSize = 50;
+  const pageSize = 25;
   const page = Math.max(1, Number(params.page) || 1);
   const q = params.q?.trim() || "";
   const access = customerAccessWhere(user);
