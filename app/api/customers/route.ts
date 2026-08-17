@@ -137,6 +137,7 @@ export async function POST(req: Request) {
       return fail(JSON.stringify(duplicates), "CUSTOMER_DUPLICATES", 409);
 
     const customerData = {
+      category: data.category,
       name: data.name,
       contact: data.contact,
       phone: data.phone,

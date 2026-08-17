@@ -6,7 +6,7 @@ import { canViewAllCustomers, customerAccessWhere, hasSalesCapabilities } from "
 import { CustomerFilters } from "@/components/customer-filters";
 import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
-import { monthRanges, periodRange } from "@/lib/period-range";
+import { periodRange } from "@/lib/period-range";
 
 export default async function Customers({
   searchParams,
@@ -25,23 +25,25 @@ export default async function Customers({
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   const filters = {
     ownership: params.ownership,
+    category: params.category,
     status: params.customerStatus,
     nature: params.nature,
     ownerId: params.ownerId,
     businessLine: params.businessLine,
     industry: params.industry,
-    createdYear: params.createdYear,
-    createdMonth: params.createdMonth,
-    createdDate: params.createdDate,
-    updatedYear: params.updatedYear,
-    updatedMonth: params.updatedMonth,
-    updatedDate: params.updatedDate,
+    createdFrom: params.createdFrom,
+    createdTo: params.createdTo,
+    updatedFrom: params.updatedFrom,
+    updatedTo: params.updatedTo,
   };
-  const createdTimeWhere = filters.createdDate ? { createdAt: periodRange("date", filters.createdDate, filters.createdDate)! } : filters.createdYear && filters.createdMonth ? { createdAt: periodRange("month", `${filters.createdYear}-${filters.createdMonth}`, `${filters.createdYear}-${filters.createdMonth}`)! } : filters.createdYear ? { createdAt: periodRange("year", filters.createdYear, filters.createdYear)! } : filters.createdMonth ? { OR: monthRanges(filters.createdMonth).map((range) => ({ createdAt: range })) } : {};
-  const updatedTimeWhere = filters.updatedDate ? { updatedAt: periodRange("date", filters.updatedDate, filters.updatedDate)! } : filters.updatedYear && filters.updatedMonth ? { updatedAt: periodRange("month", `${filters.updatedYear}-${filters.updatedMonth}`, `${filters.updatedYear}-${filters.updatedMonth}`)! } : filters.updatedYear ? { updatedAt: periodRange("year", filters.updatedYear, filters.updatedYear)! } : filters.updatedMonth ? { OR: monthRanges(filters.updatedMonth).map((range) => ({ updatedAt: range })) } : {};
+  const createdRange = periodRange("date", filters.createdFrom, filters.createdTo);
+  const updatedRange = periodRange("date", filters.updatedFrom, filters.updatedTo);
+  const createdTimeWhere = createdRange ? { createdAt: createdRange } : {};
+  const updatedTimeWhere = updatedRange ? { updatedAt: updatedRange } : {};
   const where = {
     AND: [
       access,
+      filters.category ? { category: filters.category as "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH" } : {},
       filters.ownership === "PUBLIC" ? { isPublicPool: true } : filters.ownership === "TRACKED" ? { isPublicPool: false } : {},
       params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { isPublicPool: false, ownerId: user.id } : params.quick === "collaborative" ? { isPublicPool: false, collaborators: { some: { userId: user.id } } } : params.quick === "public" ? { isPublicPool: true } : {},
       q ? { OR: [

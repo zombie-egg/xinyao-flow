@@ -61,6 +61,7 @@ export async function PATCH(
     if (duplicate)
       return fail("已有客户包含相同名称、联系人或联系方式", "CUSTOMER_EXISTS", 409);
     const customerData = {
+      category: data.category,
       name: data.name,
       contact: data.contact,
       phone: data.phone,

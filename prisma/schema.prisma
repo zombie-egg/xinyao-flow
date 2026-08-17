@@ -78,6 +78,11 @@ enum BusinessType {
   OCCUPATIONAL_HEALTH
 }
 
+enum BusinessCategory {
+  XINYAO_ENVIRONMENT
+  OCCUPATIONAL_HEALTH
+}
+
 enum ContractSigningStatus {
   SIGNED
   PENDING_SIGNATURE
@@ -338,6 +343,7 @@ model Customer {
   contactInfo       String?
   remark            String?
   businessLine      BusinessType            @default(ENVIRONMENTAL_MONITORING)
+  category          BusinessCategory        @default(XINYAO_ENVIRONMENT)
   monitoringType    String?
   industry          String                  @default("")
   status            CustomerStatus          @default(POTENTIAL)
@@ -356,13 +362,14 @@ model Customer {
   contactMethods    CustomerContactMethod[]
   collaborators     CustomerCollaborator[]
 
-  @@unique([nameNormalized, phoneNormalized])
+  @@unique([category, nameNormalized, phoneNormalized])
   @@index([ownerId, name])
   @@index([pendingOwnerName])
   @@index([isPublicPool, updatedAt])
   @@index([contactNormalized])
   @@index([updatedAt])
   @@index([businessLine, createdAt])
+  @@index([category, updatedAt])
   @@index([status, createdAt])
 }
 
@@ -449,6 +456,7 @@ model Order {
   orderNumber                String?             @unique
   contractId                 String              @unique
   customerId                 String
+  category                   BusinessCategory    @default(XINYAO_ENVIRONMENT)
   salesUserId                String
   historicalSalesName        String?
   financeUserId              String?
@@ -495,6 +503,7 @@ model Order {
   @@index([invoiceApplicationStatus, invoiceStatus])
   @@index([paymentStatus, createdAt])
   @@index([technicalUserId, technicalStatus])
+  @@index([category, createdAt])
 }
 
 model Receivable {

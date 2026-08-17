@@ -87,6 +87,8 @@ export async function PATCH(
     if (duplicate) return duplicateOrderNumberResponse(duplicate);
     const customer = await db.customer.findUnique({ where: { id: data.customerId }, include: { collaborators: { select: { userId: true } } } });
     if (!customer) return fail("客户不存在", "CUSTOMER_NOT_FOUND", 404);
+    if (customer.category !== data.category)
+      return fail("订单归属与客户模板不一致，请重新选择客户", "CATEGORY_MISMATCH", 409);
     if (customer.ownerId !== user.id && !customer.collaborators.some((item) => item.userId === user.id))
       throw new Error("FORBIDDEN");
     const lockedSignerId = order.contract.signerId || order.salesUserId;
@@ -203,6 +205,7 @@ export async function PATCH(
         const item = await tx.order.update({
           where: { id },
           data: {
+            category: data.category,
             orderNumber: data.contractNumber,
             customerId: customer.id,
             name: data.name,

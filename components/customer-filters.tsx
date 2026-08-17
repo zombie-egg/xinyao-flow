@@ -7,7 +7,7 @@ import { Input } from "./ui/input";
 import { customerStatusText } from "@/lib/customer-labels";
 import { PeriodFilterFields } from "./period-filter-fields";
 
-const advancedKeys = ["q", "ownership", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdYear", "createdMonth", "createdDate", "updatedYear", "updatedMonth", "updatedDate"];
+const advancedKeys = ["q", "category", "ownership", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdFrom", "createdTo", "updatedFrom", "updatedTo"];
 
 export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canCreate: boolean; showPublicPool: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));
@@ -36,6 +36,7 @@ export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool 
         {params.quick && <input type="hidden" name="quick" value={params.quick} />}
         <div className="grid items-end gap-3 md:grid-cols-3 xl:grid-cols-5">
           <Input name="q" defaultValue={params.q} placeholder="搜索客户、联系人、联系方式或行业" />
+          <select name="category" defaultValue={params.category || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部客户模板</option><option value="XINYAO_ENVIRONMENT">心邀环境</option><option value="OCCUPATIONAL_HEALTH">职业卫生</option></select>
           <select name="ownership" defaultValue={params.ownership || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部客户归属</option><option value="PUBLIC">公海客户</option><option value="TRACKED">跟进客户</option></select>
           <select name="ownerId" defaultValue={params.ownerId || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部跟进人</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
           <select name="customerStatus" defaultValue={params.customerStatus || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部客户状态</option>{Object.entries(customerStatusText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>

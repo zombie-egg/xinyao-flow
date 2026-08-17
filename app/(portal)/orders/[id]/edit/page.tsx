@@ -38,6 +38,7 @@ export default async function EditRejectedOrder({
         phone: true,
         address: true,
         contactInfo: true,
+        category: true,
       },
       orderBy: { name: "asc" },
     }),
@@ -60,9 +61,10 @@ export default async function EditRejectedOrder({
     redirect(`/orders/${id}`);
 
   const initial: OrderFormInitial = {
+    category: order.category,
     customerId: order.customerId,
     contractNumber: order.contract.contractNumber,
-    businessType: order.contract.businessType === "PUBLIC_HEALTH" ? "PUBLIC_HEALTH" : "ENVIRONMENTAL_MONITORING",
+    businessType: order.contract.businessType,
     productTotal: Number(order.contract.productTotal),
     amount: Number(order.contract.amount),
     technicalSupportFee: Number(order.contract.technicalSupportFee),

@@ -83,6 +83,8 @@ export async function POST(req: Request) {
     });
     if (!customer)
       return fail("客户不存在，请先创建客户", "CUSTOMER_NOT_FOUND", 404);
+    if (customer.category !== p.data.category)
+      return fail("订单归属与客户模板不一致，请重新选择客户", "CATEGORY_MISMATCH", 409);
     if (customer.isPublicPool || !customer.ownerId || !customer.owner)
       return fail("公海客户需要先认领并设置负责销售", "PUBLIC_CUSTOMER_MUST_BE_CLAIMED", 409);
     const customerOwnerId = customer.ownerId;
@@ -181,6 +183,7 @@ export async function POST(req: Request) {
       });
       const item = await tx.order.create({
         data: {
+          category: p.data.category,
           contractId: contract.id,
           orderNumber: contractNumber,
           customerId: customer.id,

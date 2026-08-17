@@ -14,6 +14,7 @@ type Customer = {
   phone: string;
   address: string | null;
   contactInfo: string | null;
+  category: "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH";
 };
 type Staff = {
   id: string;
@@ -23,9 +24,10 @@ type Staff = {
   role: { code: string };
 };
 export type OrderFormInitial = {
+  category: "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH";
   customerId: string;
   contractNumber: string | null;
-  businessType: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH";
+  businessType: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH";
   productTotal: number;
   amount: number;
   technicalSupportFee: number;
@@ -204,8 +206,10 @@ export function NewOrderForm({
   initialCustomerId?: string;
 }) {
   const router = useRouter(),
+    [category, setCategory] = useState<"XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH">(initial?.category || customers.find((item) => item.id === initialCustomerId)?.category || "XINYAO_ENVIRONMENT"),
+    [businessType, setBusinessType] = useState<"ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH">(initial?.businessType || (customers.find((item) => item.id === initialCustomerId)?.category === "OCCUPATIONAL_HEALTH" ? "OCCUPATIONAL_HEALTH" : "ENVIRONMENTAL_MONITORING")),
     [customerId, setCustomerId] = useState(
-      initial?.customerId || initialCustomerId || customers[0]?.id || "",
+      initial?.customerId || initialCustomerId || customers.find((item) => item.category === "XINYAO_ENVIRONMENT")?.id || customers[0]?.id || "",
     ),
     [customerSearch, setCustomerSearch] = useState(""),
     [message, setMessage] = useState(""),
@@ -221,7 +225,7 @@ export function NewOrderForm({
     }),
     selected = customers.find((c) => c.id === customerId),
     visible = customers.filter((c) =>
-      `${c.name}${c.contact}${c.phone}`
+      c.category === category && `${c.name}${c.contact}${c.phone}`
         .toLowerCase()
         .includes(customerSearch.toLowerCase()),
     ),
@@ -303,15 +307,35 @@ export function NewOrderForm({
         <h2 className="font-medium">第一步：客户与业务信息</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="text-sm">
+            <RequiredLabel>订单归属</RequiredLabel>
+            <select
+              name="category"
+              value={category}
+              onChange={(event) => {
+                const next = event.target.value as typeof category;
+                setCategory(next);
+                setBusinessType(next === "OCCUPATIONAL_HEALTH" ? "OCCUPATIONAL_HEALTH" : "ENVIRONMENTAL_MONITORING");
+                const first = customers.find((item) => item.category === next);
+                setCustomerId(first?.id || "");
+              }}
+              className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
+            >
+              <option value="XINYAO_ENVIRONMENT">心邀环境</option>
+              <option value="OCCUPATIONAL_HEALTH">职业卫生</option>
+            </select>
+          </label>
+          <label className="text-sm">
             <RequiredLabel>业务类型</RequiredLabel>
             <select
               name="businessType"
               required
-              defaultValue="ENVIRONMENTAL_MONITORING"
+              value={businessType}
+              onChange={(event) => setBusinessType(event.target.value as typeof businessType)}
               className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
             >
               <option value="ENVIRONMENTAL_MONITORING">环境检测</option>
               <option value="PUBLIC_HEALTH">公共卫生</option>
+              <option value="OCCUPATIONAL_HEALTH">职业卫生</option>
             </select>
           </label>
           <label className="text-sm">

@@ -1,0 +1,26 @@
+name: Import occupational health data
+
+on:
+  repository_dispatch:
+    types: [import-occupational-health]
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode audited source
+        env:
+          SOURCE_GZIP_BASE64: ${{ github.event.client_payload.source }}
+        run: printf '%s' "$SOURCE_GZIP_BASE64" | base64 --decode | gzip --decompress > /tmp/occupational-source.json
+      - name: Import and verify
+        env:
+          SSH_HOST: ${{ secrets.ZEABUR_SSH_HOST }}
+          SSH_USER: ${{ secrets.ZEABUR_SSH_USER }}
+          SSHPASS: ${{ secrets.ZEABUR_SSH_PASSWORD }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          sshpass -e scp /tmp/occupational-source.json "$SSH_USER@$SSH_HOST:/tmp/occupational-source.json"
+          sshpass -e ssh "$SSH_USER@$SSH_HOST" 'POD=$(sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b get pods -l app=xinyao-flow -o jsonpath="{.items[0].metadata.name}"); sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b cp /tmp/occupational-source.json "$POD:/tmp/occupational-source.json"; sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b exec "$POD" -- node /src/scripts/import-occupational.mjs /tmp/occupational-source.json /tmp/occupational-import-result.json; sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b exec "$POD" -- cat /tmp/occupational-import-result.json'

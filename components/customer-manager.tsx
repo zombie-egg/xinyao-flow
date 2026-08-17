@@ -19,6 +19,7 @@ type Customer = {
   contactInfo: string | null;
   remark: string | null;
   businessLine: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH";
+  category: "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH";
   monitoringType: string | null;
   industry: string;
   status: string;
@@ -59,6 +60,13 @@ function CustomerFields({
   );
   return (
     <>
+      <label className="text-sm md:col-span-2">
+        <span className="text-red-500">* </span>客户模板
+        <select name="category" defaultValue={customer?.category || "XINYAO_ENVIRONMENT"} className="mt-2 h-10 w-full rounded-lg border bg-white px-3" required>
+          <option value="XINYAO_ENVIRONMENT">心邀环境</option>
+          <option value="OCCUPATIONAL_HEALTH">职业卫生</option>
+        </select>
+      </label>
       {showScope && <label className="text-sm md:col-span-2"><span className="text-red-500">* </span>客户归属<select name="customerScope" value={customerScope} onChange={(event) => setCustomerScope(event.target.value as "TRACKED" | "PUBLIC")} className="mt-2 h-10 w-full rounded-lg border bg-white px-3"><option value="TRACKED">跟进客户</option><option value="PUBLIC">公海客户</option></select><span className="mt-1 block text-xs text-zinc-400">公海客户无需负责人，所有销售、财务和管理员均可查看。</span></label>}
       <label className="text-sm">
         <span className="text-red-500">* </span>业务线

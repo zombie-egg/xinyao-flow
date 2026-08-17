@@ -246,7 +246,7 @@ describe("客户权限与表单", () => {
       collaboratorIds: [],
     }).success).toBe(true);
   });
-  it("订单业务类型不能选择职业卫生", () => {
+  it("职业卫生订单可以选择职业卫生业务类型", () => {
     const base = {
       customerId: "customer",
       contractNumber: "HT-2026-003",
@@ -266,7 +266,7 @@ describe("客户权限与表单", () => {
       receivableExpectedDate: "2026-09-01",
       receivableResponsibleUserId: "finance",
     };
-    expect(orderFormSchema.safeParse(base).success).toBe(false);
+    expect(orderFormSchema.safeParse({ ...base, category: "OCCUPATIONAL_HEALTH" }).success).toBe(true);
   });
 });
 describe("业务统计", () => {

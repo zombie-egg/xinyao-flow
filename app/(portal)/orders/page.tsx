@@ -9,7 +9,7 @@ import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
 import { Card } from "@/components/ui/card";
 import { money } from "@/lib/utils";
-import { monthRanges, periodRange } from "@/lib/period-range";
+import { periodRange } from "@/lib/period-range";
 export default async function Orders({
   searchParams,
 }: {
@@ -42,22 +42,11 @@ export default async function Orders({
   const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const createdTimeWhere = params.createdDate
-    ? { createdAt: periodRange("date", params.createdDate, params.createdDate)! }
-    : params.createdYear && params.createdMonth
-      ? { createdAt: periodRange("month", `${params.createdYear}-${params.createdMonth}`, `${params.createdYear}-${params.createdMonth}`)! }
-      : params.createdYear
-        ? { createdAt: periodRange("year", params.createdYear, params.createdYear)! }
-        : params.createdMonth
-          ? { OR: monthRanges(params.createdMonth).map((range) => ({ createdAt: range })) }
-          : {};
-  const selectedPeriodLabel = params.createdDate
-    ? params.createdDate
-    : params.createdYear && params.createdMonth
-      ? `${params.createdYear}年${Number(params.createdMonth)}月`
-      : params.createdYear
-        ? `${params.createdYear}年`
-        : params.createdMonth ? `每年${Number(params.createdMonth)}月` : null;
+  const selectedRange = periodRange("date", params.createdFrom, params.createdTo);
+  const createdTimeWhere = selectedRange ? { createdAt: selectedRange } : {};
+  const selectedPeriodLabel = params.createdFrom || params.createdTo
+    ? `${params.createdFrom || params.createdTo} 至 ${params.createdTo || params.createdFrom}`
+    : null;
   const statusWhere =
       statusFilter === "COMPLETED"
         ? {
@@ -100,6 +89,7 @@ export default async function Orders({
     extraWhere = {
       AND: [
         params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { salesUserId: u.id } : params.quick === "collaborative" ? { customer: { collaborators: { some: { userId: u.id } } } } : {},
+        params.category ? { category: params.category as "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH" } : {},
         params.salesUserId ? { salesUserId: params.salesUserId } : {},
         params.contractStatus ? { contract: { signingStatus: params.contractStatus as "SIGNED" | "PENDING_SIGNATURE" } } : {},
         params.approvalStatus === "REJECTED" ? { approvalStatus: { in: ["MANAGER_REJECTED" as const,"FINANCE_REJECTED" as const,"ADMIN_REJECTED" as const] } } : params.approvalStatus ? { approvalStatus: params.approvalStatus as "PENDING_SALES_MANAGER"|"PENDING_FINANCE"|"PENDING_ADMIN"|"APPROVED" } : {},

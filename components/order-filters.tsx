@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { PeriodFilterFields } from "./period-filter-fields";
 
-const advancedKeys = ["q", "salesUserId", "approvalStatus", "contractStatus", "invoiceStage", "paymentStage", "amountMin", "amountMax", "createdYear", "createdMonth", "createdDate"];
+const advancedKeys = ["q", "category", "salesUserId", "approvalStatus", "contractStatus", "invoiceStage", "paymentStage", "amountMin", "amountMax", "createdFrom", "createdTo"];
 
 export function OrderFilters({ params, salesUsers, canImport }: { params: Record<string, string | undefined>; salesUsers: { id: string; name: string }[]; canImport: boolean }) {
   const [open, setOpen] = useState(advancedKeys.some((key) => Boolean(params[key])));
@@ -41,6 +41,7 @@ export function OrderFilters({ params, salesUsers, canImport }: { params: Record
         {params.quick && <input type="hidden" name="quick" value={params.quick} />}
         <div className="grid items-end gap-3 md:grid-cols-3 xl:grid-cols-5">
           <Input name="q" defaultValue={params.q} placeholder="搜索订单号、名称、客户或联系人" />
+          <select name="category" defaultValue={params.category || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部订单归属</option><option value="XINYAO_ENVIRONMENT">心邀环境</option><option value="OCCUPATIONAL_HEALTH">职业卫生</option></select>
           <select name="salesUserId" defaultValue={params.salesUserId || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部销售人员</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
           <select name="approvalStatus" defaultValue={params.approvalStatus || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部审核状态</option><option value="PENDING_SALES_MANAGER">等待销售经理</option><option value="PENDING_FINANCE">等待财务</option><option value="PENDING_ADMIN">等待管理员</option><option value="APPROVED">审核通过</option><option value="REJECTED">审核拒绝</option></select>
           <select name="contractStatus" defaultValue={params.contractStatus || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部合同状态</option><option value="SIGNED">已签订</option><option value="PENDING_SIGNATURE">待签订</option></select>

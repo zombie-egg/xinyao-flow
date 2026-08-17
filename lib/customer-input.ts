@@ -7,6 +7,7 @@ const optionalText = (max: number) =>
   );
 
 export const customerSchema = z.object({
+  category: z.enum(["XINYAO_ENVIRONMENT", "OCCUPATIONAL_HEALTH"]).default("XINYAO_ENVIRONMENT"),
   name: z.string().trim().min(2, "客户名称至少填写 2 个字").max(100),
   contact: z.string().trim().min(2, "联系人至少填写 2 个字").max(50),
   phone: z.string().trim().min(5, "联系电话至少填写 5 位").max(100),

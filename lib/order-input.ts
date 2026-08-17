@@ -25,10 +25,13 @@ export const orderNameOptions = [
 
 export const orderFormSchema = z
   .object({
+    category: z.enum(["XINYAO_ENVIRONMENT", "OCCUPATIONAL_HEALTH"], {
+      error: "请选择订单归属",
+    }).default("XINYAO_ENVIRONMENT"),
     customerId: z.string().min(1, "请选择客户"),
     contractNumber: z.string().trim().min(1, "请输入合同编号").max(100, "合同编号不能超过 100 个字"),
     name: z.enum(orderNameOptions, { error: "请选择订单名称" }),
-    businessType: z.enum(["ENVIRONMENTAL_MONITORING", "PUBLIC_HEALTH"], {
+    businessType: z.enum(["ENVIRONMENTAL_MONITORING", "PUBLIC_HEALTH", "OCCUPATIONAL_HEALTH"], {
       error: "请选择业务类型",
     }),
     productTotal: optionalNumber,

@@ -21,6 +21,7 @@ export default async function NewOrder({ searchParams }: { searchParams: Promise
         phone: true,
         address: true,
         contactInfo: true,
+        category: true,
       },
       orderBy: { name: "asc" },
     }),
