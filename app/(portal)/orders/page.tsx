@@ -42,11 +42,9 @@ export default async function Orders({
   const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const createdRange = params.createdMonth
-    ? periodRange("month", params.createdMonth, params.createdMonth)
-    : periodRange(params.createdMode, params.createdFrom, params.createdTo);
-  const selectedMonthLabel = params.createdMonth
-    ? `${params.createdMonth.slice(0, 4)}年${Number(params.createdMonth.slice(5, 7))}月`
+  const createdRange = periodRange(params.createdMode, params.createdFrom, params.createdTo);
+  const selectedMonthLabel = params.createdMode === "month" && params.createdFrom
+    ? `${params.createdFrom.slice(0, 4)}年${Number(params.createdFrom.slice(5, 7))}月${params.createdTo && params.createdTo !== params.createdFrom ? ` 至 ${params.createdTo.slice(0, 4)}年${Number(params.createdTo.slice(5, 7))}月` : ""}`
     : null;
   const statusWhere =
       statusFilter === "COMPLETED"

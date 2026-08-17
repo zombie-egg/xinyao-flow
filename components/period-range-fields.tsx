@@ -12,9 +12,17 @@ export function PeriodRangeFields({
   params: Record<string, string | undefined>;
 }) {
   const [mode, setMode] = useState(params[`${prefix}Mode`] || "date");
-  const type = mode === "year" ? "number" : mode;
-  const placeholder = mode === "year" ? "例如 2026" : undefined;
+  const years = Array.from({ length: 41 }, (_, index) => String(2000 + index));
   const fieldClass = "h-10 w-full rounded-lg border bg-white px-3 text-sm";
+  const valueFor = (side: "From" | "To") => (params[`${prefix}Mode`] || "date") === mode ? params[`${prefix}${side}`] : undefined;
+  const picker = (side: "From" | "To") => mode === "year" ? (
+    <select key={`${mode}-${side}`} name={`${prefix}${side}`} defaultValue={valueFor(side) || ""} className={fieldClass}>
+      <option value="">请选择年份</option>
+      {years.map((year) => <option key={year} value={year}>{year}年</option>)}
+    </select>
+  ) : (
+    <input key={`${mode}-${side}`} name={`${prefix}${side}`} type={mode} defaultValue={valueFor(side)} className={fieldClass} />
+  );
   return (
     <>
       <label className="text-xs text-zinc-400">
@@ -27,11 +35,11 @@ export function PeriodRangeFields({
       </label>
       <label className="text-xs text-zinc-400">
         <span className="mb-1 block">{label}（开始）</span>
-        <input key={`${mode}-from`} name={`${prefix}From`} type={type} min={mode === "year" ? 2000 : undefined} max={mode === "year" ? 2100 : undefined} defaultValue={(params[`${prefix}Mode`] || "date") === mode ? params[`${prefix}From`] : undefined} placeholder={placeholder} className={fieldClass} />
+        {picker("From")}
       </label>
       <label className="text-xs text-zinc-400">
         <span className="mb-1 block">{label}（结束）</span>
-        <input key={`${mode}-to`} name={`${prefix}To`} type={type} min={mode === "year" ? 2000 : undefined} max={mode === "year" ? 2100 : undefined} defaultValue={(params[`${prefix}Mode`] || "date") === mode ? params[`${prefix}To`] : undefined} placeholder={placeholder} className={fieldClass} />
+        {picker("To")}
       </label>
     </>
   );

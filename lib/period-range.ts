@@ -16,7 +16,9 @@ const endOf = (value: string, mode: string) => {
 export function periodRange(mode: string | undefined, from: string | undefined, to: string | undefined) {
   const selectedMode = mode === "year" || mode === "month" ? mode : "date";
   const range: { gte?: Date; lt?: Date } = {};
-  if (from) range.gte = startOf(from, selectedMode);
-  if (to) range.lt = endOf(to, selectedMode);
+  const start = from || to;
+  const end = to || from;
+  if (start) range.gte = startOf(start, selectedMode);
+  if (end) range.lt = endOf(end, selectedMode);
   return Object.keys(range).length ? range : null;
 }
