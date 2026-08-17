@@ -99,6 +99,9 @@ export default async function Orders({
         params.invoiceStage === "TO_APPLY" ? { invoiceApplicationStatus: "PENDING" as const } : params.invoiceStage === "TO_INVOICE" ? { invoiceApplicationStatus: "COMPLETED" as const, invoiceStatus: "PENDING" as const } : params.invoiceStage === "INVOICED" ? { invoiceStatus: "COMPLETED" as const } : {},
         params.paymentStage ? { paymentStatus: params.paymentStage as "PENDING"|"PARTIAL"|"COMPLETED" } : {},
         params.amountMin || params.amountMax ? { amount: { ...(params.amountMin ? { gte: Number(params.amountMin) } : {}), ...(params.amountMax ? { lte: Number(params.amountMax) } : {}) } } : {},
+        params.netAmountMin || params.netAmountMax
+          ? { contract: { netOrderAmount: { ...(params.netAmountMin ? { gte: Number(params.netAmountMin) } : {}), ...(params.netAmountMax ? { lte: Number(params.netAmountMax) } : {}) } } }
+          : {},
         createdTimeWhere,
       ],
     };

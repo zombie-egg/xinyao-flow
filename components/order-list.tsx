@@ -7,6 +7,22 @@ import {
   isOrderCompleted,
 } from "@/lib/order-workflow";
 import { PeriodFilterFields } from "./period-filter-fields";
+import { Funnel } from "lucide-react";
+import type { ReactNode } from "react";
+
+function FilterHeader({ label, active, children, wide = false }: { label: string; active?: boolean; children: ReactNode; wide?: boolean }) {
+  return <th className="relative px-4 py-3 font-medium">
+    <details className="group">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+        <span>{label}</span><Funnel size={13} className={active ? "fill-orange-500 text-orange-500" : "text-zinc-400 group-open:text-zinc-900"} />
+      </summary>
+      <div className={`absolute left-2 top-[calc(100%-4px)] z-30 rounded-xl border bg-white p-3 font-normal text-zinc-900 shadow-xl ${wide ? "w-80" : "w-52"}`}>
+        {children}
+        <div className="mt-3 flex gap-2"><button className="h-8 rounded-lg bg-zinc-950 px-3 text-xs font-medium text-white">筛选</button><Link href="/orders?status=ALL" className="inline-flex h-8 items-center rounded-lg border px-3 text-xs">清除</Link></div>
+      </div>
+    </details>
+  </th>;
+}
 type Item = {
   id: string;
   salesUserId: string;
@@ -39,42 +55,20 @@ export function OrderList({
   return (
     <form>
       {params.quick && <input type="hidden" name="quick" value={params.quick} />}
-      <div className="mb-2 flex justify-end gap-2">
-        <button className="h-8 rounded-lg bg-zinc-950 px-3 text-xs font-medium text-white">应用表头筛选</button>
-        <Link href="/orders?status=ALL" className="inline-flex h-8 items-center rounded-lg border bg-white px-3 text-xs">清除</Link>
-      </div>
       <div className="overflow-x-auto rounded-xl border bg-white">
         <table className="w-full min-w-[1500px] whitespace-nowrap text-left text-sm">
           <thead className="bg-zinc-50 text-zinc-500">
             <tr>
-              {[
-                "订单号",
-                "订单名称",
-                "客户",
-                "销售人员",
-                "金额",
-                "净签单金额",
-                "审核状态",
-                "订单状态",
-                "创建时间",
-                ...(invoiceApplicantId ? ["操作"] : []),
-              ].map((x) => (
-                <th key={x} className="px-4 py-3 font-medium">
-                  {x}
-                </th>
-              ))}
-            </tr>
-            <tr className="border-t bg-white align-top">
-              <th className="px-2 py-2"><input name="orderNumberQuery" defaultValue={params.orderNumberQuery} placeholder="关键词" className="h-9 w-36 rounded-lg border px-2 text-xs font-normal text-zinc-900" /></th>
-              <th className="px-2 py-2"><input name="orderNameQuery" defaultValue={params.orderNameQuery} placeholder="关键词" className="h-9 w-36 rounded-lg border px-2 text-xs font-normal text-zinc-900" /></th>
-              <th className="px-2 py-2"><input name="customerQuery" defaultValue={params.customerQuery} placeholder="关键词" className="h-9 w-40 rounded-lg border px-2 text-xs font-normal text-zinc-900" /></th>
-              <th className="px-2 py-2"><select name="salesUserId" defaultValue={params.salesUserId || ""} className="h-9 w-32 rounded-lg border bg-white px-2 text-xs font-normal text-zinc-900"><option value="">全部</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></th>
-              <th className="px-2 py-2"><div className="flex gap-1"><input name="amountMin" type="number" step="0.01" defaultValue={params.amountMin} placeholder="最低" className="h-9 w-20 rounded-lg border px-2 text-xs font-normal text-zinc-900" /><input name="amountMax" type="number" step="0.01" defaultValue={params.amountMax} placeholder="最高" className="h-9 w-20 rounded-lg border px-2 text-xs font-normal text-zinc-900" /></div></th>
-              <th className="px-2 py-2 text-xs font-normal text-zinc-400">随金额筛选</th>
-              <th className="px-2 py-2"><select name="approvalStatus" defaultValue={params.approvalStatus || ""} className="h-9 w-32 rounded-lg border bg-white px-2 text-xs font-normal text-zinc-900"><option value="">全部</option><option value="PENDING_SALES_MANAGER">等待销售经理</option><option value="PENDING_FINANCE">等待财务</option><option value="PENDING_ADMIN">等待管理员</option><option value="APPROVED">审核通过</option><option value="REJECTED">审核拒绝</option></select></th>
-              <th className="px-2 py-2"><select name="status" defaultValue={params.status || "ALL"} className="h-9 w-28 rounded-lg border bg-white px-2 text-xs font-normal text-zinc-900"><option value="ALL">全部</option><option value="PROCESSING">处理中</option><option value="COMPLETED">已完成</option></select></th>
-              <th className="px-2 py-2"><div className="grid gap-1"><PeriodFilterFields prefix="created" label="" params={params} /></div></th>
-              {invoiceApplicantId && <th className="px-2 py-2 text-xs font-normal text-zinc-400">—</th>}
+              <FilterHeader label="订单号" active={Boolean(params.orderNumberQuery)}><input name="orderNumberQuery" defaultValue={params.orderNumberQuery} placeholder="输入订单号关键词" className="h-9 w-full rounded-lg border px-2 text-xs" /></FilterHeader>
+              <FilterHeader label="订单名称" active={Boolean(params.orderNameQuery)}><input name="orderNameQuery" defaultValue={params.orderNameQuery} placeholder="输入订单名称关键词" className="h-9 w-full rounded-lg border px-2 text-xs" /></FilterHeader>
+              <FilterHeader label="客户" active={Boolean(params.customerQuery)}><input name="customerQuery" defaultValue={params.customerQuery} placeholder="输入客户关键词" className="h-9 w-full rounded-lg border px-2 text-xs" /></FilterHeader>
+              <FilterHeader label="销售人员" active={Boolean(params.salesUserId)}><select name="salesUserId" defaultValue={params.salesUserId || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部销售人员</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FilterHeader>
+              <FilterHeader label="金额" active={Boolean(params.amountMin || params.amountMax)}><div className="grid grid-cols-2 gap-2"><input name="amountMin" type="number" step="0.01" defaultValue={params.amountMin} placeholder="最低" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /><input name="amountMax" type="number" step="0.01" defaultValue={params.amountMax} placeholder="最高" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /></div></FilterHeader>
+              <FilterHeader label="净签单金额" active={Boolean(params.netAmountMin || params.netAmountMax)}><div className="grid grid-cols-2 gap-2"><input name="netAmountMin" type="number" step="0.01" defaultValue={params.netAmountMin} placeholder="最低" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /><input name="netAmountMax" type="number" step="0.01" defaultValue={params.netAmountMax} placeholder="最高" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /></div></FilterHeader>
+              <FilterHeader label="审核状态" active={Boolean(params.approvalStatus)}><select name="approvalStatus" defaultValue={params.approvalStatus || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部审核状态</option><option value="PENDING_SALES_MANAGER">等待销售经理</option><option value="PENDING_FINANCE">等待财务</option><option value="PENDING_ADMIN">等待管理员</option><option value="APPROVED">审核通过</option><option value="REJECTED">审核拒绝</option></select></FilterHeader>
+              <FilterHeader label="订单状态" active={Boolean(params.status && params.status !== "ALL")}><select name="status" defaultValue={params.status || "ALL"} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="ALL">全部订单状态</option><option value="PROCESSING">处理中</option><option value="COMPLETED">已完成</option></select></FilterHeader>
+              <FilterHeader label="创建时间" active={Boolean(params.createdFromValue || params.createdToValue)} wide><div className="grid gap-2"><PeriodFilterFields prefix="created" label="订单创建" params={params} /></div></FilterHeader>
+              {invoiceApplicantId && <th className="px-4 py-3 font-medium">操作</th>}
             </tr>
           </thead>
           <tbody>
