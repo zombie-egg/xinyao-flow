@@ -6,7 +6,7 @@ import { canViewAllCustomers, customerAccessWhere, hasSalesCapabilities } from "
 import { CustomerFilters } from "@/components/customer-filters";
 import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
-import { periodRange } from "@/lib/period-range";
+import { monthRanges, periodRange } from "@/lib/period-range";
 
 export default async function Customers({
   searchParams,
@@ -37,8 +37,8 @@ export default async function Customers({
     updatedMonth: params.updatedMonth,
     updatedDate: params.updatedDate,
   };
-  const createdRange = filters.createdDate ? periodRange("date", filters.createdDate, filters.createdDate) : filters.createdMonth ? periodRange("month", filters.createdMonth, filters.createdMonth) : filters.createdYear ? periodRange("year", filters.createdYear, filters.createdYear) : null;
-  const updatedRange = filters.updatedDate ? periodRange("date", filters.updatedDate, filters.updatedDate) : filters.updatedMonth ? periodRange("month", filters.updatedMonth, filters.updatedMonth) : filters.updatedYear ? periodRange("year", filters.updatedYear, filters.updatedYear) : null;
+  const createdTimeWhere = filters.createdDate ? { createdAt: periodRange("date", filters.createdDate, filters.createdDate)! } : filters.createdYear && filters.createdMonth ? { createdAt: periodRange("month", `${filters.createdYear}-${filters.createdMonth}`, `${filters.createdYear}-${filters.createdMonth}`)! } : filters.createdYear ? { createdAt: periodRange("year", filters.createdYear, filters.createdYear)! } : filters.createdMonth ? { OR: monthRanges(filters.createdMonth).map((range) => ({ createdAt: range })) } : {};
+  const updatedTimeWhere = filters.updatedDate ? { updatedAt: periodRange("date", filters.updatedDate, filters.updatedDate)! } : filters.updatedYear && filters.updatedMonth ? { updatedAt: periodRange("month", `${filters.updatedYear}-${filters.updatedMonth}`, `${filters.updatedYear}-${filters.updatedMonth}`)! } : filters.updatedYear ? { updatedAt: periodRange("year", filters.updatedYear, filters.updatedYear)! } : filters.updatedMonth ? { OR: monthRanges(filters.updatedMonth).map((range) => ({ updatedAt: range })) } : {};
   const where = {
     AND: [
       access,
@@ -60,8 +60,8 @@ export default async function Customers({
       filters.ownerId ? { OR: [{ ownerId: filters.ownerId }, { collaborators: { some: { userId: filters.ownerId } } }] } : {},
       filters.businessLine ? { businessLine: filters.businessLine as "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH" } : {},
       filters.industry ? { industry: { contains: filters.industry, mode: "insensitive" as const } } : {},
-      createdRange ? { createdAt: createdRange } : {},
-      updatedRange ? { updatedAt: updatedRange } : {},
+      createdTimeWhere,
+      updatedTimeWhere,
     ],
   };
   const [items, total, salesUsers] = await Promise.all([

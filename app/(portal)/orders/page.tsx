@@ -9,7 +9,7 @@ import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
 import { Card } from "@/components/ui/card";
 import { money } from "@/lib/utils";
-import { periodRange } from "@/lib/period-range";
+import { monthRanges, periodRange } from "@/lib/period-range";
 export default async function Orders({
   searchParams,
 }: {
@@ -42,20 +42,22 @@ export default async function Orders({
   const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const createdRange = params.createdDate
-    ? periodRange("date", params.createdDate, params.createdDate)
-    : params.createdMonth
-      ? periodRange("month", params.createdMonth, params.createdMonth)
+  const createdTimeWhere = params.createdDate
+    ? { createdAt: periodRange("date", params.createdDate, params.createdDate)! }
+    : params.createdYear && params.createdMonth
+      ? { createdAt: periodRange("month", `${params.createdYear}-${params.createdMonth}`, `${params.createdYear}-${params.createdMonth}`)! }
       : params.createdYear
-        ? periodRange("year", params.createdYear, params.createdYear)
-        : null;
+        ? { createdAt: periodRange("year", params.createdYear, params.createdYear)! }
+        : params.createdMonth
+          ? { OR: monthRanges(params.createdMonth).map((range) => ({ createdAt: range })) }
+          : {};
   const selectedPeriodLabel = params.createdDate
     ? params.createdDate
-    : params.createdMonth
-      ? `${params.createdMonth.slice(0, 4)}年${Number(params.createdMonth.slice(5, 7))}月`
+    : params.createdYear && params.createdMonth
+      ? `${params.createdYear}年${Number(params.createdMonth)}月`
       : params.createdYear
         ? `${params.createdYear}年`
-        : null;
+        : params.createdMonth ? `每年${Number(params.createdMonth)}月` : null;
   const statusWhere =
       statusFilter === "COMPLETED"
         ? {
@@ -104,7 +106,7 @@ export default async function Orders({
         params.invoiceStage === "TO_APPLY" ? { invoiceApplicationStatus: "PENDING" as const } : params.invoiceStage === "TO_INVOICE" ? { invoiceApplicationStatus: "COMPLETED" as const, invoiceStatus: "PENDING" as const } : params.invoiceStage === "INVOICED" ? { invoiceStatus: "COMPLETED" as const } : {},
         params.paymentStage ? { paymentStatus: params.paymentStage as "PENDING"|"PARTIAL"|"COMPLETED" } : {},
         params.amountMin || params.amountMax ? { amount: { ...(params.amountMin ? { gte: Number(params.amountMin) } : {}), ...(params.amountMax ? { lte: Number(params.amountMax) } : {}) } } : {},
-        createdRange ? { createdAt: createdRange } : {},
+        createdTimeWhere,
       ],
     };
   const where = { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };

@@ -22,3 +22,10 @@ export function periodRange(mode: string | undefined, from: string | undefined, 
   if (end) range.lt = endOf(end, selectedMode);
   return Object.keys(range).length ? range : null;
 }
+
+export function monthRanges(month: string) {
+  return Array.from({ length: 41 }, (_, index) => {
+    const year = 2000 + index;
+    return periodRange("month", `${year}-${month}`, `${year}-${month}`)!;
+  });
+}
