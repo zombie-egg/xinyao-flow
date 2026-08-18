@@ -401,6 +401,7 @@ export function CustomerManager({
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
   const [duplicateQuery, setDuplicateQuery] = useState("");
   const [duplicates, setDuplicates] = useState<Customer[]>([]);
   const editing = items.find((item) => item.id === editingId);
@@ -442,31 +443,40 @@ export function CustomerManager({
   async function save(event: React.FormEvent<HTMLFormElement>, id?: string) {
     event.preventDefault();
     setMessage("");
-    const res = await fetch(id ? `/api/customers/${id}` : "/api/customers", {
-      method: id ? "PATCH" : "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload(event.currentTarget)),
-    });
-    const body = await res.json();
-    if (!res.ok) {
-      if (body.code === "CUSTOMER_DUPLICATES") {
-        try {
-          setDuplicates(JSON.parse(body.message));
-        } catch {}
-        setShowDuplicates(true);
-        setMessage("发现重复客户，请先核对下面的查重结果");
-      } else setMessage(body.message);
-      return;
-    }
-    if (returnTo)
-      router.push(
-        `${returnTo}${returnTo.includes("?") ? "&" : "?"}customerId=${body.data.id}`,
-      );
-    else {
-      setShow(false);
-      setEditingId(null);
-      setMessage(id ? "客户信息已更新" : "客户创建成功");
-      router.refresh();
+    setSaving(true);
+    try {
+      const res = await fetch(id ? `/api/customers/${id}` : "/api/customers", {
+        method: id ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload(event.currentTarget)),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (body.code === "CUSTOMER_DUPLICATES") {
+          try {
+            setDuplicates(JSON.parse(body.message));
+          } catch {}
+          setShowDuplicates(true);
+          setMessage("发现重复客户，请先核对下面的查重结果");
+        } else {
+          setMessage(body.message || `保存失败（${res.status}）`);
+        }
+        return;
+      }
+      if (returnTo)
+        router.push(
+          `${returnTo}${returnTo.includes("?") ? "&" : "?"}customerId=${body.data.id}`,
+        );
+      else {
+        setShow(false);
+        setEditingId(null);
+        setMessage(id ? "客户信息已更新" : "客户创建成功");
+        router.refresh();
+      }
+    } catch {
+      setMessage("保存失败，请检查网络连接后重试");
+    } finally {
+      setSaving(false);
     }
   }
   async function checkDuplicates() {
@@ -529,7 +539,8 @@ export function CustomerManager({
               showScope
             />
             <div className="md:col-span-2">
-              <Button>保存客户</Button>
+              <Button disabled={saving}>{saving ? "保存中..." : "保存客户"}</Button>
+              {message && <p className="self-center text-sm text-red-600">{message}</p>}
             </div>
           </form>
         </Card>
@@ -550,7 +561,7 @@ export function CustomerManager({
               }
             />
             <div className="md:col-span-2 flex gap-2">
-              <Button>保存修改</Button>
+              <Button disabled={saving}>{saving ? "保存中..." : "保存修改"}</Button>
               <Button
                 type="button"
                 variant="outline"
@@ -558,6 +569,7 @@ export function CustomerManager({
               >
                 取消
               </Button>
+              {message && <p className="self-center text-sm text-red-600">{message}</p>}
             </div>
           </form>
         </Card>
