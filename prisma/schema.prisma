@@ -411,7 +411,7 @@ model CustomerActivity {
 
 model Contract {
   id                  String                @id @default(cuid())
-  contractNumber      String?               @unique
+  contractNumber      String?
   name                String
   businessType        BusinessType          @default(ENVIRONMENTAL_MONITORING)
   signingStatus       ContractSigningStatus @default(SIGNED)
@@ -449,11 +449,12 @@ model Contract {
   order               Order?
 
   @@index([salesUserId, status])
+  @@index([contractNumber])
 }
 
 model Order {
   id                         String              @id @default(cuid())
-  orderNumber                String?             @unique
+  orderNumber                String?
   contractId                 String              @unique
   customerId                 String
   category                   BusinessCategory    @default(XINYAO_ENVIRONMENT)
@@ -504,6 +505,7 @@ model Order {
   @@index([paymentStatus, createdAt])
   @@index([technicalUserId, technicalStatus])
   @@index([category, createdAt])
+  @@index([orderNumber])
 }
 
 model Receivable {

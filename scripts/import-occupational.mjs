@@ -103,8 +103,12 @@ for (const item of consolidated) {
     result.ordersHeld.push({ contractNumber: item.contractNumber, customerName, reason: "职业卫生客户无法安全建立" });
     continue;
   }
-  const existing = await db.order.findFirst({ where: { OR: [{ orderNumber: { equals: item.contractNumber, mode: "insensitive" } }, { contract: { contractNumber: { equals: item.contractNumber, mode: "insensitive" } } }] }, include: { contract: true } });
+  const existing = await db.order.findFirst({ where: { OR: [{ orderNumber: { equals: item.contractNumber, mode: "insensitive" } }, { contract: { contractNumber: { equals: item.contractNumber, mode: "insensitive" } } }] }, include: { contract: true, customer: true } });
   if (existing) {
+    if (norm(existing.customer.name) !== norm(customerName)) {
+      result.ordersHeld.push({ contractNumber: item.contractNumber, customerName, reason: `合同编号与其他客户冲突：${existing.customer.name}` });
+      continue;
+    }
     await db.$transaction([
       db.contract.update({ where: { id: existing.contractId }, data: { customerId: customer.id, businessType: "OCCUPATIONAL_HEALTH" } }),
       db.order.update({ where: { id: existing.id }, data: { category: "OCCUPATIONAL_HEALTH", customerId: customer.id } }),
