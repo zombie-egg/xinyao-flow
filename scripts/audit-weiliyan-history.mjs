@@ -13,10 +13,14 @@ const targetNumbers = [
   "XYH26041013702、XYH26032713701",
   "XYH26041013702",
   "XYH26032713701",
+  "XYH26020611901",
+  "XYH26020311901",
+  "XYH26020213601",
+  "XYH26012113601",
 ];
 
 const users = await db.user.findMany({
-  where: { name: { in: ["韦李燕", "曹琴", "刘丽花", "李华锋"] } },
+  where: { name: { in: ["韦李燕", "曹琴", "刘丽花", "李华锋", "颜锦杏", "王静"] } },
   select: { id: true, name: true, email: true, status: true },
 });
 const orders = await db.order.findMany({
@@ -78,8 +82,10 @@ if (applyChanges) {
   const cao = users.find((user) => user.name === "曹琴");
   const liulihua = users.find((user) => user.name === "刘丽花");
   const lihuafeng = users.find((user) => user.name === "李华锋");
+  const yanjinxing = users.find((user) => user.name === "颜锦杏");
+  const wangjing = users.find((user) => user.name === "王静");
   const finance = await db.user.findFirst({ where: { name: "郭一铭", status: "ACTIVE" }, select: { id: true, name: true } });
-  if (!wei || !cao || !liulihua || !lihuafeng) throw new Error("目标销售账号匹配不完整");
+  if (!wei || !cao || !liulihua || !lihuafeng || !yanjinxing || !wangjing) throw new Error("目标销售账号匹配不完整");
 
   const [kobe, envMarchCustomer, occupationalAprilCustomer, pacific, fulai, xinlishengyuan] = await Promise.all([
     db.customer.findFirst({ where: { name: "神户粘着制品（深圳）有限公司" }, select: { id: true, name: true } }),
@@ -265,7 +271,35 @@ if (applyChanges) {
       createdAt: new Date("2026-04-16T07:22:00.000Z"),
       updatedAt: new Date("2026-04-29T02:03:00.000Z"),
     });
-    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng };
+    const ownerRepairs = [];
+    for (const item of [
+      { number: "XYH26020611901", user: yanjinxing },
+      { number: "XYH26020311901", user: yanjinxing },
+      { number: "XYH26020213601", user: wangjing },
+      { number: "XYH26012113601", user: wangjing },
+    ]) {
+      const matches = await tx.order.findMany({
+        where: { orderNumber: item.number },
+        select: { id: true, contractId: true },
+      });
+      if (matches.length !== 1)
+        throw new Error(`订单${item.number}匹配到${matches.length}条，停止负责人修复`);
+      const order = matches[0];
+      await tx.order.update({ where: { id: order.id }, data: { salesUserId: item.user.id } });
+      await tx.contract.update({ where: { id: order.contractId }, data: { salesUserId: item.user.id, signerId: item.user.id, responsibleUserId: item.user.id } });
+      await tx.receivable.updateMany({ where: { orderId: order.id }, data: { responsibleUserId: item.user.id } });
+      await tx.operationLog.create({
+        data: {
+          userId: item.user.id,
+          action: "REPAIR_HISTORICAL_ORDER_OWNER",
+          module: "ORDER",
+          targetId: order.id,
+          description: `依据源文件修正历史订单负责人：${item.number} → ${item.user.name}`,
+        },
+      });
+      ownerRepairs.push({ orderNumber: item.number, orderId: order.id, owner: item.user.name });
+    }
+    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng, ownerRepairs };
   });
 }
 
