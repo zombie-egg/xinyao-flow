@@ -22,10 +22,18 @@ const targetNumbers = [
   "XYH26031008201001",
   "XYH26051214402",
   "XYH26072214401",
+  "XYH26072314301",
+  "XYG26060514301",
+  "XYH26042414307",
+  "XYG26032314303",
+  "XYG26042714301",
+  "XYH26032614302",
+  "XYG26022714306",
+  "XYG26012114302",
 ];
 
 const users = await db.user.findMany({
-  where: { name: { in: ["韦李燕", "曹琴", "刘丽花", "刘丽文", "李华锋", "颜锦杏", "王静"] } },
+  where: { name: { in: ["韦李燕", "曹琴", "刘丽花", "刘丽文", "李华锋", "颜锦杏", "王静", "刘秀兰"] } },
   select: { id: true, name: true, email: true, status: true },
 });
 const orders = await db.order.findMany({
@@ -88,6 +96,12 @@ const requestedCustomers = await db.customer.findMany({
         "深圳宝兴医院排榜社区健康服务中心",
         "深圳宝兴医院排榜社区健康服务站",
         "深圳万基隆电子科技有限公司",
+        "时代天源（深圳）科技有限公司",
+        "中铁十一局集团有限公司",
+        "昊极科技（广东）有限公司",
+        "深圳市深长城商企服务集团有限公司",
+        "深圳市宝安区新安街道文汇幼儿园",
+        "深圳龙岗芽咪龙园大观托育服务有限公司",
       ],
     },
   },
