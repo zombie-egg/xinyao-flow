@@ -12,6 +12,13 @@ export const businessLineText: Record<string, string> = {
   OCCUPATIONAL_HEALTH: "职业卫生",
 };
 
+export const customerNatures = [
+  "普通客户",
+  "VIP客户",
+  "VVIP客户",
+  "政府事业单位",
+] as const;
+
 export const monitoringTypes = [
   "年度检测",
   "验收检测",

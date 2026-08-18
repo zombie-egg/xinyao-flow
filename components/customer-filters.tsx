@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { customerStatusText } from "@/lib/customer-labels";
+import { customerNatures, customerStatusText } from "@/lib/customer-labels";
 import { PeriodFilterFields } from "./period-filter-fields";
 
 const advancedKeys = ["q", "category", "ownership", "ownerId", "customerStatus", "nature", "industry", "businessLine", "createdFromValue", "createdToValue", "updatedFromValue", "updatedToValue"];
@@ -40,7 +40,7 @@ export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool 
           <select name="ownership" defaultValue={params.ownership || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部客户归属</option><option value="PUBLIC">公海客户</option><option value="TRACKED">跟进客户</option></select>
           <select name="ownerId" defaultValue={params.ownerId || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部跟进人</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
           <select name="customerStatus" defaultValue={params.customerStatus || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部客户状态</option>{Object.entries(customerStatusText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-          <Input name="nature" defaultValue={params.nature} placeholder="客户性质" />
+          <select name="nature" defaultValue={params.nature || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部客户性质</option>{customerNatures.map((item) => <option key={item} value={item}>{item}</option>)}</select>
           <Input name="industry" defaultValue={params.industry} placeholder="客户行业" />
           <select name="businessLine" defaultValue={params.businessLine || ""} className="h-10 rounded-lg border bg-white px-3 text-sm"><option value="">全部业务线</option><option value="ENVIRONMENTAL_MONITORING">环境检测</option><option value="PUBLIC_HEALTH">公共卫生</option><option value="OCCUPATIONAL_HEALTH">职业卫生</option></select>
           <PeriodFilterFields prefix="created" label="创建" params={params} />

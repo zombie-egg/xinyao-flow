@@ -67,7 +67,7 @@ export default async function Customers({
       params.phoneQuery ? { phone: { contains: params.phoneQuery } } : {},
       params.collaboratorId ? { collaborators: { some: { userId: params.collaboratorId } } } : {},
       filters.status ? { status: filters.status as "POTENTIAL" | "INITIAL_CONTACT" | "FOLLOWING" | "WON" | "LOYAL" } : {},
-      filters.nature ? { nature: { contains: filters.nature, mode: "insensitive" as const } } : {},
+      filters.nature ? { nature: filters.nature } : {},
       filters.ownerId ? { OR: [{ ownerId: filters.ownerId }, { collaborators: { some: { userId: filters.ownerId } } }] } : {},
       filters.businessLine ? { businessLine: filters.businessLine as "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH" } : {},
       filters.industry ? { industry: { contains: filters.industry, mode: "insensitive" as const } } : {},

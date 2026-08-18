@@ -8,6 +8,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
   businessLineText,
+  customerNatures,
   customerStatusText,
   monitoringTypes,
 } from "@/lib/customer-labels";
@@ -225,11 +226,15 @@ function CustomerFields({
       </label>
       <label className="text-sm">
         客户性质
-        <Input
+        <select
           name="nature"
           defaultValue={customer?.nature || "普通客户"}
-          className="mt-2"
-        />
+          className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
+        >
+          {customerNatures.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
       </label>
       <label className="text-sm md:col-span-2">
         地址
@@ -561,7 +566,7 @@ export function CustomerManager({
               <FilterHeader label="负责销售" active={Boolean(params.ownerId)}><select name="ownerId" defaultValue={params.ownerId || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部销售</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FilterHeader>
               <FilterHeader label="协同跟进人" active={Boolean(params.collaboratorId)}><select name="collaboratorId" defaultValue={params.collaboratorId || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部协同人</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FilterHeader>
               <FilterHeader label="客户状态" active={Boolean(params.customerStatus)}><select name="customerStatus" defaultValue={params.customerStatus || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部状态</option>{Object.entries(customerStatusText).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></FilterHeader>
-              <FilterHeader label="客户性质" active={Boolean(params.nature)}><Input name="nature" defaultValue={params.nature} placeholder="输入客户性质" className="h-9 text-xs" /></FilterHeader>
+              <FilterHeader label="客户性质" active={Boolean(params.nature)}><select name="nature" defaultValue={params.nature || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部客户性质</option>{customerNatures.map((item) => <option key={item} value={item}>{item}</option>)}</select></FilterHeader>
               <th className="sticky right-0 z-20 w-[260px] min-w-[260px] border-l bg-zinc-50 px-3 py-3 font-medium shadow-[-6px_0_10px_-8px_rgba(0,0,0,0.35)]">操作</th>
             </tr>
           </thead>
@@ -579,7 +584,6 @@ export function CustomerManager({
                   <td className="px-4">{item.category === "OCCUPATIONAL_HEALTH" ? "职业卫生" : "心邀环境"}</td>
                   <td className="px-4">
                     {businessLineText[item.businessLine]}
-                    {item.monitoringType ? ` · ${item.monitoringType}` : ""}
                   </td>
                   <td className="px-4">{item.industry}</td>
                   <td className="px-4">{item.contact}</td>
