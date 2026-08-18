@@ -17,6 +17,11 @@ const targetNumbers = [
   "XYH26020311901",
   "XYH26020213601",
   "XYH26012113601",
+  "XYG25061614302",
+  "XYH26031008201",
+  "XYH26031008201001",
+  "XYH26051214402",
+  "XYH26072214401",
 ];
 
 const users = await db.user.findMany({
@@ -74,6 +79,19 @@ const pacificCustomers = await db.customer.findMany({
       orderBy: { createdAt: "desc" },
     },
   },
+});
+const requestedCustomers = await db.customer.findMany({
+  where: {
+    name: {
+      in: [
+        "深圳市联瑞汽车销售服务有限公司",
+        "深圳宝兴医院排榜社区健康服务中心",
+        "深圳宝兴医院排榜社区健康服务站",
+        "深圳万基隆电子科技有限公司",
+      ],
+    },
+  },
+  select: { id: true, name: true, category: true, businessLine: true, owner: { select: { name: true } } },
 });
 
 let repair = null;
@@ -303,5 +321,5 @@ if (applyChanges) {
   });
 }
 
-console.log(JSON.stringify({ applyChanges, repair, users, orders, pacificCustomers }, null, 2));
+console.log(JSON.stringify({ applyChanges, repair, users, orders, pacificCustomers, requestedCustomers }, null, 2));
 await db.$disconnect();
