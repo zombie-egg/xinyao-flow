@@ -44,6 +44,13 @@ export async function PATCH(
     });
     if (salesCount !== new Set([ownerId, ...collaboratorIds]).size)
       return fail("负责销售或协同销售不存在", "INVALID_SALES_USER");
+    // Imported data can contain multiple historical copies of the same customer.
+    // Allow repairing template/business-line and other profile fields when the
+    // customer identity itself (name, contact, phone) has not changed.
+    const identityUnchanged =
+      existing.nameNormalized === normalizeCustomerName(data.name) &&
+      existing.contactNormalized === normalizeCustomerContact(data.contact) &&
+      existing.phoneNormalized === normalizeCustomerPhone(data.phone);
     const duplicate = await db.customer.findFirst({
       where: {
         id: { not: id },
@@ -59,7 +66,7 @@ export async function PATCH(
       },
       select: { id: true },
     });
-    if (duplicate)
+    if (duplicate && !identityUnchanged)
       return fail("已有客户包含相同名称、联系人或联系方式", "CUSTOMER_EXISTS", 409);
     const customerData = {
       category: data.category,
