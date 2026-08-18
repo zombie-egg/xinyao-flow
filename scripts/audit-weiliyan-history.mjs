@@ -111,6 +111,7 @@ const requestedCustomers = await db.customer.findMany({
 let repair = null;
 if (applyChanges) {
   const wei = users.find((user) => user.name === "韦李燕");
+  const liuxiulan = users.find((user) => user.name === "刘秀兰");
   const cao = users.find((user) => user.name === "曹琴");
   const liulihua = users.find((user) => user.name === "刘丽花");
   const liuwen = users.find((user) => user.name === "刘丽文");
@@ -118,9 +119,9 @@ if (applyChanges) {
   const yanjinxing = users.find((user) => user.name === "颜锦杏");
   const wangjing = users.find((user) => user.name === "王静");
   const finance = await db.user.findFirst({ where: { name: "郭一铭", status: "ACTIVE" }, select: { id: true, name: true } });
-  if (!wei || !cao || !liulihua || !liuwen || !lihuafeng || !yanjinxing || !wangjing) throw new Error("目标销售账号匹配不完整");
+  if (!wei || !cao || !liulihua || !liuwen || !lihuafeng || !yanjinxing || !wangjing || !liuxiulan) throw new Error("目标销售账号匹配不完整");
 
-  const [kobe, envMarchCustomer, occupationalAprilCustomer, pacific, fulai, xinlishengyuan, lianrui, baoxing, wanjilong] = await Promise.all([
+  const [kobe, envMarchCustomer, occupationalAprilCustomer, pacific, fulai, xinlishengyuan, lianrui, baoxing, wanjilong, shidai, zhongtie, haoji, shenchangcheng, wenhui, yamilong] = await Promise.all([
     db.customer.findFirst({ where: { name: "神户粘着制品（深圳）有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "东莞市炜豪兴包装制品有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "深圳市北鼎晶辉科技有限公司", category: "OCCUPATIONAL_HEALTH" }, select: { id: true, name: true } }),
@@ -130,8 +131,14 @@ if (applyChanges) {
     db.customer.findFirst({ where: { name: "深圳市联瑞汽车销售服务有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "深圳宝兴医院排榜社区健康服务站" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "深圳万基隆电子科技有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "时代天源（深圳）科技有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "中铁十一局集团有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "昊极科技（广东）有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "深圳市深长城商企服务集团有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "深圳市宝安区新安街道文汇幼儿园" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "深圳龙岗芽咪龙园大观托育服务有限公司" }, select: { id: true, name: true } }),
   ]);
-  if (!kobe || !envMarchCustomer || !occupationalAprilCustomer || !pacific || !fulai || !xinlishengyuan || !lianrui || !baoxing || !wanjilong)
+  if (!kobe || !envMarchCustomer || !occupationalAprilCustomer || !pacific || !fulai || !xinlishengyuan || !lianrui || !baoxing || !wanjilong || !shidai || !zhongtie || !haoji || !shenchangcheng || !wenhui || !yamilong)
     throw new Error("目标客户匹配不完整，停止修复");
 
   const createHistoricalOrder = async (tx, data) => {
@@ -384,7 +391,33 @@ if (applyChanges) {
       createdAt: new Date("2026-06-02T07:22:00.000Z"),
       updatedAt: new Date("2026-07-10T02:09:00.000Z"),
     });
-    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng, ownerRepairs, lianrui2025, lianrui2026, baoxingOrder };
+    const liuOrders = [];
+    for (const item of [
+      ["XYH26072314301", shidai, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 4500, "2026-07-23"],
+      ["XYG26060514301", shidai, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 1272, "2026-06-05"],
+      ["XYH26042414307", zhongtie, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 1200, "2026-04-24"],
+      ["XYG26032314303、XYG26042714301", haoji, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 2000, "2026-04-27"],
+      ["XYH26032614302", shenchangcheng, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 3561.6, "2026-03-26"],
+      ["XYG26022714306", wenhui, "OCCUPATIONAL_HEALTH", "OCCUPATIONAL_HEALTH", "职业卫生检测与评价", 1200, "2026-02-27"],
+      ["XYG26012114302", yamilong, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 700, "2026-01-21"],
+    ]) {
+      const [number, customer, category, businessType, project, amount, date] = item;
+      const createdAt = new Date(`${date}T08:00:00.000Z`);
+      liuOrders.push(await createHistoricalOrder(tx, {
+        key: `liuxiulan-${number}`,
+        number,
+        receivableNumber: `PMO.${number}`,
+        customerId: customer.id,
+        category,
+        businessType,
+        project,
+        amount,
+        salesUserId: liuxiulan.id,
+        createdAt,
+        updatedAt: createdAt,
+      }));
+    }
+    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng, ownerRepairs, lianrui2025, lianrui2026, baoxingOrder, liuOrders };
   });
 }
 
