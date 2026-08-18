@@ -16,7 +16,7 @@ const targetNumbers = [
 ];
 
 const users = await db.user.findMany({
-  where: { name: { in: ["韦李燕", "曹琴"] } },
+  where: { name: { in: ["韦李燕", "曹琴", "刘丽花", "李华锋"] } },
   select: { id: true, name: true, email: true, status: true },
 });
 const orders = await db.order.findMany({
@@ -76,16 +76,20 @@ let repair = null;
 if (applyChanges) {
   const wei = users.find((user) => user.name === "韦李燕");
   const cao = users.find((user) => user.name === "曹琴");
+  const liulihua = users.find((user) => user.name === "刘丽花");
+  const lihuafeng = users.find((user) => user.name === "李华锋");
   const finance = await db.user.findFirst({ where: { name: "郭一铭", status: "ACTIVE" }, select: { id: true, name: true } });
-  if (!wei || !cao) throw new Error("韦李燕或曹琴账号不存在");
+  if (!wei || !cao || !liulihua || !lihuafeng) throw new Error("目标销售账号匹配不完整");
 
-  const [kobe, envMarchCustomer, occupationalAprilCustomer, pacific] = await Promise.all([
+  const [kobe, envMarchCustomer, occupationalAprilCustomer, pacific, fulai, xinlishengyuan] = await Promise.all([
     db.customer.findFirst({ where: { name: "神户粘着制品（深圳）有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "东莞市炜豪兴包装制品有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "深圳市北鼎晶辉科技有限公司", category: "OCCUPATIONAL_HEALTH" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { nameNormalized: { contains: "太平洋电线电缆深圳有限公司" } }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "富来世寿塑料（深圳）有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "深圳市新力盛源环保科技有限公司" }, select: { id: true, name: true } }),
   ]);
-  if (!kobe || !envMarchCustomer || !occupationalAprilCustomer || !pacific)
+  if (!kobe || !envMarchCustomer || !occupationalAprilCustomer || !pacific || !fulai || !xinlishengyuan)
     throw new Error("目标客户匹配不完整，停止修复");
 
   const createHistoricalOrder = async (tx, data) => {
@@ -101,9 +105,9 @@ if (applyChanges) {
         businessType: data.businessType,
         signingStatus: "SIGNED",
         customerId: data.customerId,
-        salesUserId: wei.id,
-        signerId: wei.id,
-        responsibleUserId: wei.id,
+        salesUserId: data.salesUserId,
+        signerId: data.salesUserId,
+        responsibleUserId: data.salesUserId,
         collaboratorId: finance?.id,
         productTotal: data.amount,
         amount: data.amount,
@@ -128,7 +132,7 @@ if (applyChanges) {
         contractId,
         customerId: data.customerId,
         category: data.category,
-        salesUserId: wei.id,
+        salesUserId: data.salesUserId,
         name: data.project,
         projectRequirements: data.project,
         remark: "依据2026-08-18源文件复核补录",
@@ -153,7 +157,7 @@ if (applyChanges) {
         amount: data.amount,
         expectedDate: data.createdAt,
         remark: "历史数据复核补录",
-        responsibleUserId: wei.id,
+        responsibleUserId: data.salesUserId,
         collaboratorUserId: finance?.id,
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
@@ -161,7 +165,7 @@ if (applyChanges) {
     });
     await tx.operationLog.create({
       data: {
-        userId: wei.id,
+        userId: data.salesUserId,
         action: "REPAIR_HISTORICAL_ORDER",
         module: "ORDER",
         targetId: orderId,
@@ -201,6 +205,7 @@ if (applyChanges) {
       businessType: "ENVIRONMENTAL_MONITORING",
       project: "日常环境检测",
       amount: 2800,
+      salesUserId: wei.id,
       createdAt: new Date("2026-04-29T01:35:00.000Z"),
       updatedAt: new Date("2026-05-06T00:51:00.000Z"),
     });
@@ -213,6 +218,7 @@ if (applyChanges) {
       businessType: "OCCUPATIONAL_HEALTH",
       project: "职业卫生检测与评价",
       amount: 6000,
+      salesUserId: wei.id,
       createdAt: new Date("2026-04-29T01:29:00.000Z"),
       updatedAt: new Date("2026-05-06T00:52:00.000Z"),
     });
@@ -233,7 +239,33 @@ if (applyChanges) {
         description: "依据源文件将XYH25122408201及太平洋电线电缆客户归属从韦李燕修正为曹琴",
       },
     });
-    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id };
+    const duplicateA1 = await createHistoricalOrder(tx, {
+      key: "XYH24041011401A1-environment",
+      number: "XYH24041011401A1",
+      receivableNumber: "PMO.XYH24041011401A1",
+      customerId: fulai.id,
+      category: "XINYAO_ENVIRONMENT",
+      businessType: "ENVIRONMENTAL_MONITORING",
+      project: "日常环境检测",
+      amount: 6700,
+      salesUserId: liulihua.id,
+      createdAt: new Date("2024-04-23T01:31:00.000Z"),
+      updatedAt: new Date("2024-04-23T03:14:00.000Z"),
+    });
+    const combinedLihuafeng = await createHistoricalOrder(tx, {
+      key: "XYH26041013702-XYH26032713701-environment",
+      number: "XYH26041013702、XYH26032713701",
+      receivableNumber: "PMO.XYH26041013702、XYH26032713701",
+      customerId: xinlishengyuan.id,
+      category: "XINYAO_ENVIRONMENT",
+      businessType: "ENVIRONMENTAL_MONITORING",
+      project: "日常环境检测",
+      amount: 1200,
+      salesUserId: lihuafeng.id,
+      createdAt: new Date("2026-04-16T07:22:00.000Z"),
+      updatedAt: new Date("2026-04-29T02:03:00.000Z"),
+    });
+    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng };
   });
 }
 
