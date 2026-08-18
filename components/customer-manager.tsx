@@ -562,7 +562,7 @@ export function CustomerManager({
               <FilterHeader label="协同跟进人" active={Boolean(params.collaboratorId)}><select name="collaboratorId" defaultValue={params.collaboratorId || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部协同人</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FilterHeader>
               <FilterHeader label="客户状态" active={Boolean(params.customerStatus)}><select name="customerStatus" defaultValue={params.customerStatus || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部状态</option>{Object.entries(customerStatusText).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></FilterHeader>
               <FilterHeader label="客户性质" active={Boolean(params.nature)}><Input name="nature" defaultValue={params.nature} placeholder="输入客户性质" className="h-9 text-xs" /></FilterHeader>
-              <th className="px-4 py-3 font-medium">操作</th>
+              <th className="sticky right-0 z-20 w-[260px] min-w-[260px] border-l bg-zinc-50 px-3 py-3 font-medium shadow-[-6px_0_10px_-8px_rgba(0,0,0,0.35)]">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -604,8 +604,8 @@ export function CustomerManager({
                     </Badge>
                   </td>
                   <td className="px-4">{item.nature || "—"}</td>
-                  <td className="px-4">
-                    <div className="flex gap-2">
+                  <td className="sticky right-0 z-10 w-[260px] min-w-[260px] border-l bg-white px-3 shadow-[-6px_0_10px_-8px_rgba(0,0,0,0.2)]">
+                    <div className="flex flex-nowrap gap-2 whitespace-nowrap">
                       <Link
                         href={`/customers/${item.id}`}
                         className="inline-flex h-8 items-center rounded-lg border px-3"
