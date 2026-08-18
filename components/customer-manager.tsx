@@ -96,9 +96,16 @@ function CustomerFields({
   canManageCollaborators?: boolean;
   showScope?: boolean;
 }) {
-  const [businessLine, setBusinessLine] = useState(
-    customer?.businessLine || "ENVIRONMENTAL_MONITORING",
+  const [category, setCategory] = useState<"XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH">(
+    customer?.category || "XINYAO_ENVIRONMENT",
   );
+  const allowedBusinessLines: Customer["businessLine"][] = category === "XINYAO_ENVIRONMENT"
+    ? ["ENVIRONMENTAL_MONITORING"]
+    : ["PUBLIC_HEALTH", "OCCUPATIONAL_HEALTH"];
+  const initialBusinessLine = customer?.businessLine && allowedBusinessLines.includes(customer.businessLine)
+    ? customer.businessLine
+    : allowedBusinessLines[0];
+  const [businessLine, setBusinessLine] = useState<typeof initialBusinessLine>(initialBusinessLine);
   const [contacts, setContacts] = useState(
     customer?.contactMethods
       .filter((item) => item.label !== "电话" || item.value !== customer.phone)
@@ -117,7 +124,12 @@ function CustomerFields({
         <span className="text-red-500">* </span>客户模板
         <select
           name="category"
-          defaultValue={customer?.category || "XINYAO_ENVIRONMENT"}
+          value={category}
+          onChange={(event) => {
+            const nextCategory = event.target.value as typeof category;
+            setCategory(nextCategory);
+            setBusinessLine(nextCategory === "XINYAO_ENVIRONMENT" ? "ENVIRONMENTAL_MONITORING" : "OCCUPATIONAL_HEALTH");
+          }}
           className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
           required
         >
@@ -154,9 +166,7 @@ function CustomerFields({
           }
           className="mt-2 h-10 w-full rounded-lg border bg-white px-3"
         >
-          <option value="ENVIRONMENTAL_MONITORING">环境检测</option>
-          <option value="PUBLIC_HEALTH">公共卫生</option>
-          <option value="OCCUPATIONAL_HEALTH">职业卫生</option>
+          {allowedBusinessLines.map((value) => <option key={value} value={value}>{value === "ENVIRONMENTAL_MONITORING" ? "环境检测" : value === "PUBLIC_HEALTH" ? "公共卫生" : "职业卫生"}</option>)}
         </select>
       </label>
       {businessLine === "ENVIRONMENTAL_MONITORING" && (

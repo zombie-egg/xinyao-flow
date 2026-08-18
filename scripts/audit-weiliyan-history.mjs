@@ -25,7 +25,7 @@ const targetNumbers = [
 ];
 
 const users = await db.user.findMany({
-  where: { name: { in: ["韦李燕", "曹琴", "刘丽花", "李华锋", "颜锦杏", "王静"] } },
+  where: { name: { in: ["韦李燕", "曹琴", "刘丽花", "刘丽文", "李华锋", "颜锦杏", "王静"] } },
   select: { id: true, name: true, email: true, status: true },
 });
 const orders = await db.order.findMany({
@@ -99,21 +99,25 @@ if (applyChanges) {
   const wei = users.find((user) => user.name === "韦李燕");
   const cao = users.find((user) => user.name === "曹琴");
   const liulihua = users.find((user) => user.name === "刘丽花");
+  const liuwen = users.find((user) => user.name === "刘丽文");
   const lihuafeng = users.find((user) => user.name === "李华锋");
   const yanjinxing = users.find((user) => user.name === "颜锦杏");
   const wangjing = users.find((user) => user.name === "王静");
   const finance = await db.user.findFirst({ where: { name: "郭一铭", status: "ACTIVE" }, select: { id: true, name: true } });
-  if (!wei || !cao || !liulihua || !lihuafeng || !yanjinxing || !wangjing) throw new Error("目标销售账号匹配不完整");
+  if (!wei || !cao || !liulihua || !liuwen || !lihuafeng || !yanjinxing || !wangjing) throw new Error("目标销售账号匹配不完整");
 
-  const [kobe, envMarchCustomer, occupationalAprilCustomer, pacific, fulai, xinlishengyuan] = await Promise.all([
+  const [kobe, envMarchCustomer, occupationalAprilCustomer, pacific, fulai, xinlishengyuan, lianrui, baoxing, wanjilong] = await Promise.all([
     db.customer.findFirst({ where: { name: "神户粘着制品（深圳）有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "东莞市炜豪兴包装制品有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "深圳市北鼎晶辉科技有限公司", category: "OCCUPATIONAL_HEALTH" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { nameNormalized: { contains: "太平洋电线电缆深圳有限公司" } }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "富来世寿塑料（深圳）有限公司" }, select: { id: true, name: true } }),
     db.customer.findFirst({ where: { name: "深圳市新力盛源环保科技有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "深圳市联瑞汽车销售服务有限公司" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "深圳宝兴医院排榜社区健康服务站" }, select: { id: true, name: true } }),
+    db.customer.findFirst({ where: { name: "深圳万基隆电子科技有限公司" }, select: { id: true, name: true } }),
   ]);
-  if (!kobe || !envMarchCustomer || !occupationalAprilCustomer || !pacific || !fulai || !xinlishengyuan)
+  if (!kobe || !envMarchCustomer || !occupationalAprilCustomer || !pacific || !fulai || !xinlishengyuan || !lianrui || !baoxing || !wanjilong)
     throw new Error("目标客户匹配不完整，停止修复");
 
   const createHistoricalOrder = async (tx, data) => {
@@ -121,6 +125,12 @@ if (applyChanges) {
     const orderId = stableId("repair_order", data.key);
     const existing = await tx.order.findUnique({ where: { id: orderId }, select: { id: true } });
     if (existing) return { orderId, created: false };
+    const dayStart = new Date(data.createdAt);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+    const matching = await tx.order.findFirst({ where: { orderNumber: data.number, customerId: data.customerId, amount: data.amount, createdAt: { gte: dayStart, lt: dayEnd } }, select: { id: true } });
+    if (matching) return { orderId: matching.id, created: false };
     await tx.contract.create({
       data: {
         id: contractId,
@@ -295,6 +305,9 @@ if (applyChanges) {
       { number: "XYH26020311901", user: yanjinxing },
       { number: "XYH26020213601", user: wangjing },
       { number: "XYH26012113601", user: wangjing },
+      { number: "XYH26031008201", user: cao },
+      { number: "XYH26031008201001", user: cao },
+      { number: "XYH26072214401", user: liuwen },
     ]) {
       const matches = await tx.order.findMany({
         where: { orderNumber: item.number },
@@ -317,7 +330,47 @@ if (applyChanges) {
       });
       ownerRepairs.push({ orderNumber: item.number, orderId: order.id, owner: item.user.name });
     }
-    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng, ownerRepairs };
+    await tx.customer.update({ where: { id: lianrui.id }, data: { category: "XINYAO_ENVIRONMENT", businessLine: "ENVIRONMENTAL_MONITORING" } });
+    const lianrui2025 = await createHistoricalOrder(tx, {
+      key: "XYG25061614302-2025",
+      number: "XYG25061614302",
+      receivableNumber: "PMO.XYG25061614302-2025",
+      customerId: lianrui.id,
+      category: "XINYAO_ENVIRONMENT",
+      businessType: "ENVIRONMENTAL_MONITORING",
+      project: "日常环境检测",
+      amount: 4500,
+      salesUserId: liulihua.id,
+      createdAt: new Date("2025-06-24T08:26:00.000Z"),
+      updatedAt: new Date("2025-06-26T10:34:00.000Z"),
+    });
+    const lianrui2026 = await createHistoricalOrder(tx, {
+      key: "XYG25061614302-2026",
+      number: "XYG25061614302",
+      receivableNumber: "PMO.XYG25061614302-2026",
+      customerId: lianrui.id,
+      category: "XINYAO_ENVIRONMENT",
+      businessType: "ENVIRONMENTAL_MONITORING",
+      project: "日常环境检测",
+      amount: 4500,
+      salesUserId: liulihua.id,
+      createdAt: new Date("2026-07-28T02:02:00.000Z"),
+      updatedAt: new Date("2026-08-10T06:41:00.000Z"),
+    });
+    const baoxingOrder = await createHistoricalOrder(tx, {
+      key: "XYH26051214402-environment",
+      number: "XYH26051214402",
+      receivableNumber: "PMO.XYH26051214402",
+      customerId: baoxing.id,
+      category: "XINYAO_ENVIRONMENT",
+      businessType: "ENVIRONMENTAL_MONITORING",
+      project: "日常环境检测",
+      amount: 2000,
+      salesUserId: liuwen.id,
+      createdAt: new Date("2026-06-02T07:22:00.000Z"),
+      updatedAt: new Date("2026-07-10T02:09:00.000Z"),
+    });
+    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng, ownerRepairs, lianrui2025, lianrui2026, baoxingOrder };
   });
 }
 

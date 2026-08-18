@@ -32,6 +32,10 @@ export const customerSchema = z.object({
   salesUserId: optionalText(100),
   collaboratorIds: z.array(z.string().min(1)).max(20).default([]),
 }).superRefine((value, ctx) => {
+  if (value.category === "XINYAO_ENVIRONMENT" && value.businessLine !== "ENVIRONMENTAL_MONITORING")
+    ctx.addIssue({ code: "custom", path: ["businessLine"], message: "心邀环境模板只能选择环境检测业务线" });
+  if (value.category === "OCCUPATIONAL_HEALTH" && !["PUBLIC_HEALTH", "OCCUPATIONAL_HEALTH"].includes(value.businessLine))
+    ctx.addIssue({ code: "custom", path: ["businessLine"], message: "职业卫生模板只能选择公共卫生或职业卫生业务线" });
   if (value.businessLine === "ENVIRONMENTAL_MONITORING" && !value.monitoringType)
     ctx.addIssue({ code: "custom", path: ["monitoringType"], message: "请选择环境检测类型" });
 });

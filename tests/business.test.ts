@@ -240,6 +240,7 @@ describe("客户权限与表单", () => {
       contact: "李四",
       phone: "13900000000",
       contactMethods: [],
+      category: "OCCUPATIONAL_HEALTH",
       businessLine: "OCCUPATIONAL_HEALTH",
       industry: "职业卫生",
       status: "POTENTIAL",
