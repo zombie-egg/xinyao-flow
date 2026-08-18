@@ -1,0 +1,21 @@
+name: Repair audited ownership
+
+on:
+  repository_dispatch:
+    types: [repair-audited-ownership]
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run audited idempotent repair
+        env:
+          SSH_HOST: ${{ secrets.ZEABUR_SSH_HOST }}
+          SSH_USER: ${{ secrets.ZEABUR_SSH_USER }}
+          SSHPASS: ${{ secrets.ZEABUR_SSH_PASSWORD }}
+        run: |
+          sudo apt-get update >/dev/null && sudo apt-get install -y sshpass >/dev/null
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          sshpass -e ssh "$SSH_USER@$SSH_HOST" 'POD=$(sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b get pods -l app=xinyao-flow -o jsonpath="{.items[0].metadata.name}"); sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b exec "$POD" -- node /src/scripts/repair-ownership.mjs'
