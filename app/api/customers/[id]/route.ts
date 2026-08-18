@@ -48,9 +48,9 @@ export async function PATCH(
     // Allow repairing template/business-line and other profile fields when the
     // customer identity itself (name, contact, phone) has not changed.
     const identityUnchanged =
-      existing.nameNormalized === normalizeCustomerName(data.name) &&
-      existing.contactNormalized === normalizeCustomerContact(data.contact) &&
-      existing.phoneNormalized === normalizeCustomerPhone(data.phone);
+      normalizeCustomerName(existing.name) === normalizeCustomerName(data.name) &&
+      normalizeCustomerContact(existing.contact) === normalizeCustomerContact(data.contact) &&
+      normalizeCustomerPhone(existing.phone) === normalizeCustomerPhone(data.phone);
     const duplicate = await db.customer.findFirst({
       where: {
         id: { not: id },
