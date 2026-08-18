@@ -36,7 +36,7 @@ export async function GET(
       u.role.code.startsWith("FINANCE") ||
       (u.role.code === "TECH_MANAGER" && order.approvalStatus === "APPROVED") ||
       (u.role.code === "TECH_EMPLOYEE" && order.technicalUserId === u.id) ||
-      (u.role.code === "SALES_EMPLOYEE" && (order.salesUserId === u.id || order.customer.collaborators.some((item) => item.userId === u.id))) ||
+      (u.role.code === "SALES_EMPLOYEE" && (order.salesUserId === u.id || order.customer.ownerId === u.id || order.customer.collaborators.some((item) => item.userId === u.id))) ||
       (u.role.code === "SALES_MANAGER" &&
         order.salesUser.departmentId === u.departmentId);
     if (!allowed) throw new Error("FORBIDDEN");

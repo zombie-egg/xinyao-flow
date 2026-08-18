@@ -1,0 +1,28 @@
+name: Audit customer and order ownership
+
+on:
+  repository_dispatch:
+    types: [audit-ownership]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode source and run encrypted audit
+        env:
+          SOURCE_GZIP_BASE64: ${{ github.event.client_payload.source }}
+          AUDIT_KEY: ${{ github.event.client_payload.key }}
+          SSH_HOST: ${{ secrets.ZEABUR_SSH_HOST }}
+          SSH_USER: ${{ secrets.ZEABUR_SSH_USER }}
+          SSHPASS: ${{ secrets.ZEABUR_SSH_PASSWORD }}
+        run: |
+          echo "::add-mask::$AUDIT_KEY"
+          printf '%s' "$SOURCE_GZIP_BASE64" | base64 --decode | gzip --decompress > /tmp/occupational-source.json
+          sudo apt-get update >/dev/null && sudo apt-get install -y sshpass >/dev/null
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          sshpass -e scp /tmp/occupational-source.json "$SSH_USER@$SSH_HOST:/tmp/occupational-source.json"
+          RESULT=$(sshpass -e ssh "$SSH_USER@$SSH_HOST" 'POD=$(sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b get pods -l app=xinyao-flow -o jsonpath="{.items[0].metadata.name}"); sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b cp /tmp/occupational-source.json "$POD:/tmp/occupational-source.json"; sudo k3s kubectl -n environment-6a7da4faf8fa433a2b5dfa7b exec "$POD" -- node /src/scripts/audit-ownership.mjs /tmp/occupational-source.json')
+          ENCRYPTED=$(printf '%s' "$RESULT" | gzip | openssl enc -aes-256-cbc -pbkdf2 -salt -pass pass:"$AUDIT_KEY" | base64 -w0)
+          echo "AUDIT_RESULT=$ENCRYPTED"

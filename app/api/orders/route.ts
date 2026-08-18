@@ -87,8 +87,6 @@ export async function POST(req: Request) {
       return fail("订单归属与客户模板不一致，请重新选择客户", "CATEGORY_MISMATCH", 409);
     if (customer.isPublicPool || !customer.ownerId || !customer.owner)
       return fail("公海客户需要先认领并设置负责销售", "PUBLIC_CUSTOMER_MUST_BE_CLAIMED", 409);
-    const customerOwnerId = customer.ownerId;
-    const customerOwner = customer.owner;
     const canUseCustomer =
       customer.ownerId === u.id ||
       customer.collaborators.some((item) => item.userId === u.id);
@@ -125,7 +123,7 @@ export async function POST(req: Request) {
       maxBytes: 10 * 1024 * 1024,
       optimizeImage: true,
     });
-    const managerCreated = customerOwner.role.code === "SALES_MANAGER" || customerOwner.role.code === "ADMIN",
+    const managerCreated = u.role.code === "SALES_MANAGER" || u.role.code === "ADMIN",
       approvalStatus = managerCreated
         ? "PENDING_FINANCE"
         : "PENDING_SALES_MANAGER",
@@ -158,7 +156,7 @@ export async function POST(req: Request) {
           businessType: p.data.businessType,
           signingStatus: p.data.signingStatus,
           customerId: customer.id,
-          salesUserId: customerOwnerId,
+          salesUserId: u.id,
           signerId: u.id,
           responsibleUserId: u.id,
           collaboratorId: p.data.collaboratorId,
@@ -187,7 +185,7 @@ export async function POST(req: Request) {
           contractId: contract.id,
           orderNumber: contractNumber,
           customerId: customer.id,
-          salesUserId: customerOwnerId,
+          salesUserId: u.id,
           name: p.data.name,
           contact: customer.contact,
           phone: customer.phone,
@@ -220,7 +218,7 @@ export async function POST(req: Request) {
           action: "SUBMIT_ORDER",
           module: "ORDER",
           targetId: item.id,
-          description: `提交订单“${item.name}”审核，并设为客户“${customer.name}”的负责销售`,
+          description: `提交订单“${item.name}”审核，订单销售人员：${u.name}，客户：${customer.name}`,
         },
       });
       const recipients = managerCreated
@@ -230,7 +228,7 @@ export async function POST(req: Request) {
         : await tx.user.findMany({
             where: {
               role: { code: "SALES_MANAGER" },
-              departmentId: customerOwner.departmentId,
+              departmentId: u.departmentId,
               status: "ACTIVE",
             },
           });

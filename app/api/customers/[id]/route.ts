@@ -27,7 +27,7 @@ export async function PATCH(
       include: { collaborators: { select: { userId: true } } },
     });
     if (!existing) return fail("客户不存在", "NOT_FOUND", 404);
-    if (existing.isPublicPool || !existing.ownerId)
+    if (!existing.ownerId)
       return fail("公海客户请先认领后再编辑", "PUBLIC_CUSTOMER_MUST_BE_CLAIMED", 409);
     const canEdit = canEditCustomerProfile(user.role.code, existing, user.id);
     if (!canEdit) throw new Error("FORBIDDEN");
@@ -47,6 +47,7 @@ export async function PATCH(
     const duplicate = await db.customer.findFirst({
       where: {
         id: { not: id },
+        category: data.category,
         OR: [
           { nameNormalized: normalizeCustomerName(data.name) },
           { contactNormalized: normalizeCustomerContact(data.contact) },
@@ -83,6 +84,7 @@ export async function PATCH(
         data: {
           ...customerData,
           ownerId,
+          isPublicPool: false,
           nameNormalized: normalizeCustomerName(data.name),
           contactNormalized: normalizeCustomerContact(data.contact),
           phoneNormalized: normalizeCustomerPhone(data.phone),

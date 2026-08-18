@@ -44,6 +44,7 @@ export async function POST(
         data: {
           isPublicPool: false,
           ownerId: parsed.data.ownerId,
+          pendingOwnerName: null,
           status: "POTENTIAL",
           collaborators: {
             deleteMany: {},

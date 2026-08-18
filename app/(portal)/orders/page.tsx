@@ -30,7 +30,7 @@ export default async function Orders({
     baseWhere = u.role.code === "SALES_MANAGER"
       ? { salesUser: { departmentId: u.departmentId } }
       : u.role.code === "SALES_EMPLOYEE"
-        ? { OR: [{ salesUserId: u.id }, { customer: { collaborators: { some: { userId: u.id } } } }] }
+        ? { OR: [{ salesUserId: u.id }, { customer: { ownerId: u.id } }, { customer: { collaborators: { some: { userId: u.id } } } }] }
       : u.role.code === "TECH_MANAGER"
         ? { historicalSalesName: null, approvalStatus: "APPROVED" as const }
         : u.role.code === "TECH_EMPLOYEE"
