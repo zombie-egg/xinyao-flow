@@ -25,28 +25,21 @@ export default async function DraftOrders() {
     <>
       <PageHeader title="草稿箱" description="仅显示由你负责的未提交订单草稿" />
       {items.length ? (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-zinc-50 text-zinc-500">
-                <tr><th className="px-4 py-3">订单号</th><th className="px-4 py-3">订单名称</th><th className="px-4 py-3">客户</th><th className="px-4 py-3">金额</th><th className="px-4 py-3">状态</th><th className="px-4 py-3">更新时间</th><th className="px-4 py-3">操作</th></tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-t">
-                    <td className="px-4 py-4"><Link href={`/orders/${item.id}`} className="underline">{item.orderNumber || "草稿订单"}</Link></td>
-                    <td className="px-4">{item.name}</td>
-                    <td className="px-4">{item.customer.name}</td>
-                    <td className="px-4">{money(Number(item.amount))}</td>
-                    <td className="px-4"><Badge>草稿</Badge></td>
-                    <td className="px-4 text-zinc-500">{dateTime(item.createdAt)}</td>
-                    <td className="px-4"><DraftOrderActions id={item.id} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {items.map((item) => (
+            <Card key={item.id} className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <Link href={`/orders/${item.id}`} className="text-lg font-semibold underline-offset-4 hover:underline">{item.orderNumber || "草稿订单"}</Link>
+                <Badge>草稿</Badge>
+              </div>
+              <p className="text-base">{item.name}</p>
+              <p className="text-sm text-zinc-500">客户：{item.customer.name}</p>
+              <p className="text-sm text-zinc-500">金额：{money(Number(item.amount))}</p>
+              <p className="text-sm text-zinc-500">保存于：{dateTime(item.createdAt)}</p>
+              <div className="border-t pt-3"><DraftOrderActions id={item.id} /></div>
+            </Card>
+          ))}
+        </div>
       ) : <Empty text="暂无订单草稿" />}
     </>
   );

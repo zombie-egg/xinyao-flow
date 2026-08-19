@@ -286,6 +286,8 @@ export function NewOrderForm({
     setLoading(true);
     const form = new FormData(e.currentTarget);
     form.set("customerId", customerId);
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    form.set("intent", submitter?.value || "SUBMIT");
     try {
       const res = await fetch(orderId ? `/api/orders/${orderId}` : "/api/orders", {
           method: orderId ? "PATCH" : "POST",
