@@ -441,7 +441,6 @@ if (applyChanges) {
     });
     const liuOrders = [];
     for (const item of [
-      ["XYH26072314301", shidai, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 4500, "2026-07-23"],
       ["XYG26060514301", shidai, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 1272, "2026-06-05"],
       ["XYH26042414307", zhongtie, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 1200, "2026-04-24"],
       ["XYG26032314303、XYG26042714301", haoji, "XINYAO_ENVIRONMENT", "ENVIRONMENTAL_MONITORING", "日常环境检测", 2000, "2026-04-27"],
