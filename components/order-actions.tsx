@@ -52,6 +52,28 @@ export function RejectedOrderActions({ id }: { id: string }) {
     </div>
   );
 }
+export function PendingOrderActions({ id }: { id: string }) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  async function withdraw() {
+    if (!confirm("确定撤回这个审核中的订单吗？撤回后可以修改并重新提交。")) return;
+    const res = await fetch(`/api/orders/${id}/withdraw`, { method: "POST" });
+    const body = await res.json();
+    if (!res.ok) {
+      setMessage(body.message || "撤回失败");
+      return;
+    }
+    router.push(`/orders/${id}/edit`);
+    router.refresh();
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-zinc-600">订单正在审核中，如发现填写错误，可以先撤回再修改。</p>
+      <Button type="button" variant="outline" onClick={withdraw}>撤回并编辑</Button>
+      {message && <p className="text-sm text-red-600">{message}</p>}
+    </div>
+  );
+}
 export function ReviewActions({ id }: { id: string }) {
   const router = useRouter();
   async function review(result: "APPROVE" | "REJECT") {

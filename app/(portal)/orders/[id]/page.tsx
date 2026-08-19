@@ -19,6 +19,7 @@ import {
   InvoiceApplicationForm,
   PaymentForm,
   RejectedOrderActions,
+  PendingOrderActions,
   ContractSigningStatusAction,
 } from "@/components/order-actions";
 export default async function OrderDetail({
@@ -292,6 +293,11 @@ export default async function OrderDetail({
               ["MANAGER_REJECTED", "FINANCE_REJECTED", "ADMIN_REJECTED"].includes(
                 order.approvalStatus,
               ) && <RejectedOrderActions id={id} />}{" "}
+            {canSalesOperate &&
+              order.status !== "CANCELLED" &&
+              ["PENDING_SALES_MANAGER", "PENDING_FINANCE", "PENDING_ADMIN"].includes(order.approvalStatus) && (
+                <PendingOrderActions id={id} />
+              )}
             {(canManager || canFinance || canAdmin) && (
               <ReviewActions id={id} />
             )}{" "}

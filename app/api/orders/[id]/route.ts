@@ -12,6 +12,7 @@ const rejectedStatuses = [
   "FINANCE_REJECTED",
   "ADMIN_REJECTED",
 ] as const;
+const editableStatuses = ["DRAFT", ...rejectedStatuses] as const;
 export async function GET(
   _: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -64,13 +65,8 @@ export async function PATCH(
       return fail("离职人员历史订单仅用于查询和统计", "HISTORICAL_ORDER_READ_ONLY", 409);
     const canOperate = order.salesUserId === user.id || order.customer.collaborators.some((item) => item.userId === user.id);
     if (!canOperate) throw new Error("FORBIDDEN");
-    if (
-      !rejectedStatuses.includes(
-        order.approvalStatus as (typeof rejectedStatuses)[number],
-      ) ||
-      order.status === "CANCELLED"
-    )
-      return fail("只有被拒绝的订单可以修改", "INVALID_STATE", 409);
+    if (!editableStatuses.includes(order.approvalStatus as (typeof editableStatuses)[number]) || order.status === "CANCELLED")
+      return fail("只有撤回或被拒绝的订单可以修改", "INVALID_STATE", 409);
 
     let form: FormData;
     try {

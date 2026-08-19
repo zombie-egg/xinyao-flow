@@ -57,7 +57,7 @@ export default async function EditRejectedOrder({
   if (!order) notFound();
   if (order.salesUserId !== user.id && !order.customer.collaborators.some((item) => item.userId === user.id))
     throw new Error("FORBIDDEN");
-  if (!rejectedStatuses.includes(order.approvalStatus) || order.status === "CANCELLED")
+  if ((order.approvalStatus !== "DRAFT" && !rejectedStatuses.includes(order.approvalStatus)) || order.status === "CANCELLED")
     redirect(`/orders/${id}`);
 
   const initial: OrderFormInitial = {
@@ -105,8 +105,8 @@ export default async function EditRejectedOrder({
   return (
     <>
       <PageHeader
-        title="修改被拒订单"
-        description="修改完成后将重新进入原有合同审核流程，历史审批记录会保留"
+        title={order.approvalStatus === "DRAFT" ? "修改并重新提交订单" : "修改被拒订单"}
+        description="修改完成后将重新进入原有合同审核流程"
       />
       <NewOrderForm
         customers={customers}

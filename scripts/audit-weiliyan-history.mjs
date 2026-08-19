@@ -231,6 +231,54 @@ if (applyChanges) {
   };
 
   repair = await db.$transaction(async (tx) => {
+    const wrongLiuOrder = await tx.order.findFirst({
+      where: { orderNumber: "XYH26072314301", amount: 4500, salesUserId: liuxiulan.id },
+      include: { contract: true, receivable: true },
+    });
+    const originalXyg = await tx.order.findFirst({
+      where: {
+        orderNumber: "XYG25061614302",
+        amount: 4500,
+        customer: { name: "深圳市联瑞汽车销售服务有限公司" },
+        createdAt: { gte: new Date("2026-07-01T00:00:00.000Z") },
+      },
+      include: { contract: true, receivable: true },
+      orderBy: { createdAt: "desc" },
+    });
+    let orderNumberRepair = { deletedWrongOrder: null, renamedOrder: null };
+    if (wrongLiuOrder && originalXyg) {
+      await tx.receivable.deleteMany({ where: { orderId: wrongLiuOrder.id } });
+      await tx.order.delete({ where: { id: wrongLiuOrder.id } });
+      await tx.contract.delete({ where: { id: wrongLiuOrder.contractId } });
+      await tx.order.update({
+        where: { id: originalXyg.id },
+        data: { orderNumber: "XYH26072314301", salesUserId: liuxiulan.id },
+      });
+      await tx.contract.update({
+        where: { id: originalXyg.contractId },
+        data: {
+          contractNumber: "XYH26072314301",
+          salesUserId: liuxiulan.id,
+          signerId: liuxiulan.id,
+          responsibleUserId: liuxiulan.id,
+        },
+      });
+      if (originalXyg.receivable)
+        await tx.receivable.update({
+          where: { id: originalXyg.receivable.id },
+          data: { number: "PMO.XYH26072314301", responsibleUserId: liuxiulan.id },
+        });
+      await tx.operationLog.create({
+        data: {
+          userId: liuxiulan.id,
+          action: "REPAIR_ORDER_NUMBER_AND_OWNER",
+          module: "ORDER",
+          targetId: originalXyg.id,
+          description: "修正源文件订单号：XYG25061614302 → XYH26072314301，负责人改为刘秀兰；删除错误补录副本",
+        },
+      });
+      orderNumberRepair = { deletedWrongOrder: wrongLiuOrder.id, renamedOrder: originalXyg.id };
+    }
     const mixed = await tx.order.findFirst({
       where: { orderNumber: "XYH26030911301", amount: 1500 },
       select: { id: true, contractId: true },
@@ -417,7 +465,7 @@ if (applyChanges) {
         updatedAt: createdAt,
       }));
     }
-    return { mixedOrderRestored: mixed.id, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng, ownerRepairs, lianrui2025, lianrui2026, baoxingOrder, liuOrders };
+    return { mixedOrderRestored: mixed.id, orderNumberRepair, kobeOrder, occupationalOrder, reassignedOrder: extra.id, pacificCustomer: pacific.id, duplicateA1, combinedLihuafeng, ownerRepairs, lianrui2025, lianrui2026, baoxingOrder, liuOrders };
   });
 }
 
