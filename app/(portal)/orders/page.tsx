@@ -118,7 +118,7 @@ export default async function Orders({
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
-  }), db.order.count({ where }), cachedSalesUsers(), db.order.aggregate({ where, _sum: { amount: true, paidAmount: true } }), db.contract.aggregate({ where: { order: { is: where } }, _sum: { netOrderAmount: true } })]);
+  }), db.order.count({ where }), cachedSalesUsers(), db.order.aggregate({ where, _sum: { amount: true, paidAmount: true } }), draftView ? Promise.resolve({ _sum: { netOrderAmount: null } }) : db.contract.aggregate({ where: { order: { is: where } }, _sum: { netOrderAmount: true } })]);
   return (
     <>
       <PageHeader
