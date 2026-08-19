@@ -54,12 +54,8 @@ export async function PATCH(
       let data, contractNumber: string | undefined;
       if (p.data.result === "REJECT") {
         data = {
-          approvalStatus: managerStage
-            ? ("MANAGER_REJECTED" as const)
-            : financeStage
-              ? ("FINANCE_REJECTED" as const)
-              : ("ADMIN_REJECTED" as const),
-          status: "REJECTED" as const,
+          approvalStatus: "DRAFT" as const,
+          status: "DRAFT" as const,
         };
       } else if (managerStage)
         data = {
@@ -86,6 +82,8 @@ export async function PATCH(
         };
       }
       const item = await tx.order.update({ where: { id }, data });
+      if (p.data.result === "REJECT")
+        await tx.contract.update({ where: { id: item.contractId }, data: { status: "DRAFT" } });
       await tx.contractApproval.create({
         data: {
           orderId: id,

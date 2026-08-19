@@ -304,7 +304,7 @@ export async function DELETE(
     const customer = await db.customer.findUnique({ where: { id: order.customerId }, include: { collaborators: { select: { userId: true } } } });
     if (!customer || (order.salesUserId !== user.id && !customer.collaborators.some((item) => item.userId === user.id)))
       throw new Error("FORBIDDEN");
-    const isDraft = order.approvalStatus === "DRAFT" || order.status === "DRAFT";
+    const isDraft = order.approvalStatus === "DRAFT" || order.status === "DRAFT" || order.status === "REJECTED";
     if ((!isDraft && !rejectedStatuses.includes(order.approvalStatus as (typeof rejectedStatuses)[number])) || order.status === "CANCELLED")
       return fail("只有草稿或被拒绝的订单可以取消", "INVALID_STATE", 409);
     await db.$transaction(async (tx) => {
