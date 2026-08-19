@@ -109,7 +109,9 @@ export default async function Orders({
         createdTimeWhere,
       ],
     };
-  const where = { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };
+  const where = draftView
+    ? { salesUserId: u.id, approvalStatus: "DRAFT" as const }
+    : { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };
   const [items, total, salesUsers, amountTotals, netTotals] = await Promise.all([db.order.findMany({
     where,
     select: { id: true, salesUserId: true, orderNumber: true, name: true, amount: true, approvalStatus: true, invoiceStatus: true, invoiceApplicationStatus: true, paymentStatus: true, status: true, createdAt: true, historicalSalesName: true, customer: { select: { id: true, name: true, collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } }, contract: { select: { netOrderAmount: true } } },
