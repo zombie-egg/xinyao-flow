@@ -304,9 +304,9 @@ export async function DELETE(
     const customer = await db.customer.findUnique({ where: { id: order.customerId }, include: { collaborators: { select: { userId: true } } } });
     if (!customer || (order.salesUserId !== user.id && !customer.collaborators.some((item) => item.userId === user.id)))
       throw new Error("FORBIDDEN");
-    const isPendingReview = ["PENDING_SALES_MANAGER", "PENDING_FINANCE", "PENDING_ADMIN"].includes(order.approvalStatus);
-    const isDeletableDraft = !isPendingReview && order.approvalStatus !== "APPROVED" && order.status !== "APPROVED" && order.status !== "IN_PROGRESS" && order.status !== "COMPLETED" && order.status !== "CANCELLED";
-    if (!isDeletableDraft)
+    const isProtected = ["PENDING_SALES_MANAGER", "PENDING_FINANCE", "PENDING_ADMIN"].includes(order.approvalStatus) ||
+      ["APPROVED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].includes(order.status);
+    if (isProtected)
       return fail("只有草稿或被拒绝的订单可以取消", "INVALID_STATE", 409);
     await db.$transaction(async (tx) => {
       await tx.order.update({ where: { id }, data: { status: "CANCELLED" } });
