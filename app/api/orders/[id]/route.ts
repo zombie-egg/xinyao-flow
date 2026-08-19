@@ -304,27 +304,30 @@ export async function DELETE(
     const customer = await db.customer.findUnique({ where: { id: order.customerId }, include: { collaborators: { select: { userId: true } } } });
     if (!customer || (order.salesUserId !== user.id && !customer.collaborators.some((item) => item.userId === user.id)))
       throw new Error("FORBIDDEN");
-    const isProtected = ["PENDING_SALES_MANAGER", "PENDING_FINANCE", "PENDING_ADMIN"].includes(order.approvalStatus) ||
-      ["APPROVED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].includes(order.status);
+    const isDraftOrder = order.approvalStatus === "DRAFT" || order.status === "DRAFT";
+    const isProtected = !isDraftOrder && (["PENDING_SALES_MANAGER", "PENDING_FINANCE", "PENDING_ADMIN"].includes(order.approvalStatus) ||
+      ["APPROVED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].includes(order.status));
     if (isProtected)
       return fail("只有草稿或被拒绝的订单可以取消", "INVALID_STATE", 409);
     await db.$transaction(async (tx) => {
-      await tx.order.update({ where: { id }, data: { status: "CANCELLED" } });
-      await tx.contract.update({
-        where: { id: order.contractId },
-        data: { status: "CANCELLED" },
-      });
+      if (isDraftOrder) {
+        await tx.order.delete({ where: { id } });
+        await tx.contract.delete({ where: { id: order.contractId } });
+      } else {
+        await tx.order.update({ where: { id }, data: { status: "CANCELLED" } });
+        await tx.contract.update({ where: { id: order.contractId }, data: { status: "CANCELLED" } });
+      }
       await tx.operationLog.create({
         data: {
           userId: user.id,
           action: "CANCEL_ORDER",
           module: "ORDER",
           targetId: id,
-          description: `${order.approvalStatus === "DRAFT" ? "销售删除订单草稿" : "销售取消被拒订单"}“${order.name}”`,
+          description: `${isDraftOrder ? "销售删除订单草稿" : "销售取消被拒订单"}“${order.name}”`,
         },
       });
     });
-    return ok({ id, status: "CANCELLED" });
+    return ok({ id, status: isDraftOrder ? "DELETED" : "CANCELLED" });
   } catch (error) {
     return apiError(error);
   }
