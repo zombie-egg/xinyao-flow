@@ -18,6 +18,7 @@ export default async function Orders({
 }) {
   const u = await requireUser(),
     params = await searchParams,
+    draftView = params.drafts === "1",
     pageSize = 25,
     page = Math.max(1, Number(params.page) || 1),
     q = params.q?.trim() || "",
@@ -27,16 +28,18 @@ export default async function Orders({
         : params.status === "PROCESSING"
           ? "PROCESSING"
           : "ALL",
-    baseWhere = u.role.code === "SALES_MANAGER"
-      ? { salesUser: { departmentId: u.departmentId } }
+    baseWhere = draftView
+      ? { salesUserId: u.id, approvalStatus: "DRAFT" as const }
+      : u.role.code === "SALES_MANAGER"
+      ? { AND: [{ approvalStatus: { not: "DRAFT" as const } }, { salesUser: { departmentId: u.departmentId } }] }
       : u.role.code === "SALES_EMPLOYEE"
-        ? { OR: [{ salesUserId: u.id }, { customer: { ownerId: u.id } }, { customer: { collaborators: { some: { userId: u.id } } } }] }
+        ? { OR: [{ salesUserId: u.id }, { approvalStatus: { not: "DRAFT" as const }, customer: { ownerId: u.id } }, { approvalStatus: { not: "DRAFT" as const }, customer: { collaborators: { some: { userId: u.id } } } }] }
       : u.role.code === "TECH_MANAGER"
         ? { historicalSalesName: null, approvalStatus: "APPROVED" as const }
         : u.role.code === "TECH_EMPLOYEE"
           ? { historicalSalesName: null, approvalStatus: "APPROVED" as const, technicalUserId: u.id }
           : u.role.code.startsWith("FINANCE") || u.role.code === "ADMIN"
-            ? {}
+            ? { approvalStatus: { not: "DRAFT" as const } }
             : null;
   if (!baseWhere) throw new Error("FORBIDDEN");
   const now = new Date();
@@ -117,7 +120,8 @@ export default async function Orders({
   return (
     <>
       <PageHeader
-        title={
+        title={draftView ? "草稿箱" :
+          
           u.role.code === "SALES_EMPLOYEE"
             ? "我的订单"
             : u.role.code === "SALES_MANAGER"

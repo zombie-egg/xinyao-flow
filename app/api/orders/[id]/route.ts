@@ -78,6 +78,7 @@ export async function PATCH(
     if (!parsed.success)
       return fail(parsed.error.issues[0].message, "VALIDATION_ERROR");
     const data = parsed.data;
+    const saveDraft = form.get("intent") === "DRAFT";
     submittedContractNumber = data.contractNumber;
     const duplicate = await findOrderByNumber(data.contractNumber, id);
     if (duplicate) return duplicateOrderNumberResponse(duplicate);
@@ -145,7 +146,7 @@ export async function PATCH(
     }
 
     const managerCreated = user.role.code === "SALES_MANAGER" || user.role.code === "ADMIN";
-    const approvalStatus = managerCreated
+    const approvalStatus = saveDraft ? "DRAFT" : managerCreated
       ? ("PENDING_FINANCE" as const)
       : ("PENDING_SALES_MANAGER" as const);
     const reviewFee = data.reviewFee || 0;
@@ -238,7 +239,7 @@ export async function PATCH(
             collaboratorUserId: data.receivableCollaboratorUserId,
           },
         });
-        const recipients = managerCreated
+        const recipients = saveDraft ? [] : managerCreated
           ? await tx.user.findMany({
               where: { department: { code: "FINANCE" }, status: "ACTIVE" },
               select: { id: true },
@@ -256,7 +257,7 @@ export async function PATCH(
             data: recipients.map((recipient) => ({
               userId: recipient.id,
               type: "APPROVAL" as const,
-              title: "被拒订单已修改并重新提交",
+            title: saveDraft ? "订单草稿已保存" : "订单已修改并重新提交",
               content: item.name,
               targetId: item.id,
             })),
@@ -304,12 +305,10 @@ export async function DELETE(
     if (!customer || (order.salesUserId !== user.id && !customer.collaborators.some((item) => item.userId === user.id)))
       throw new Error("FORBIDDEN");
     if (
-      !rejectedStatuses.includes(
-        order.approvalStatus as (typeof rejectedStatuses)[number],
-      ) ||
+      (order.approvalStatus !== "DRAFT" && !rejectedStatuses.includes(order.approvalStatus as (typeof rejectedStatuses)[number])) ||
       order.status === "CANCELLED"
     )
-      return fail("只有被拒绝的订单可以取消", "INVALID_STATE", 409);
+      return fail("只有草稿或被拒绝的订单可以取消", "INVALID_STATE", 409);
     await db.$transaction(async (tx) => {
       await tx.order.update({ where: { id }, data: { status: "CANCELLED" } });
       await tx.contract.update({
@@ -322,7 +321,7 @@ export async function DELETE(
           action: "CANCEL_ORDER",
           module: "ORDER",
           targetId: id,
-          description: `销售取消被拒订单“${order.name}”`,
+          description: `${order.approvalStatus === "DRAFT" ? "销售删除订单草稿" : "销售取消被拒订单"}“${order.name}”`,
         },
       });
     });

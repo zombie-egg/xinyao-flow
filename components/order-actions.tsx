@@ -74,6 +74,24 @@ export function PendingOrderActions({ id }: { id: string }) {
     </div>
   );
 }
+export function DraftOrderActions({ id }: { id: string }) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  async function remove() {
+    if (!confirm("确定删除这个订单草稿吗？删除后不能恢复。")) return;
+    const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+    const body = await res.json();
+    if (!res.ok) return setMessage(body.message || "删除失败");
+    router.refresh();
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Link href={`/orders/${id}/edit`} className="inline-flex h-10 items-center rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white">编辑并提交</Link>
+      <Button type="button" variant="outline" onClick={remove}>删除草稿</Button>
+      {message && <span className="text-sm text-red-600">{message}</span>}
+    </div>
+  );
+}
 export function ReviewActions({ id }: { id: string }) {
   const router = useRouter();
   async function review(result: "APPROVE" | "REJECT") {

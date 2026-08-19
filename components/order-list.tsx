@@ -104,7 +104,12 @@ export function OrderList({
                 <td className="px-4 text-zinc-500">{dateTime(x.createdAt)}</td>
                 {invoiceApplicantId && (
                   <td className="px-4">
-                    {(x.salesUserId === invoiceApplicantId || x.customerCollaboratorIds?.includes(invoiceApplicantId)) &&
+                    {x.salesUserId === invoiceApplicantId && x.approvalStatus === "DRAFT" ? (
+                      <div className="flex gap-2">
+                        <Link href={`/orders/${x.id}/edit`} className="inline-flex h-8 items-center rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white">编辑</Link>
+                        <button type="button" className="inline-flex h-8 items-center rounded-lg border px-3 text-sm" onClick={async () => { if (!confirm("确定删除这个订单草稿吗？删除后不能恢复。")) return; const res = await fetch(`/api/orders/${x.id}`, { method: "DELETE" }); if (res.ok) window.location.reload(); }}>删除</button>
+                      </div>
+                    ) : (x.salesUserId === invoiceApplicantId || x.customerCollaboratorIds?.includes(invoiceApplicantId)) &&
                     x.status !== "CANCELLED" &&
                     [
                       "MANAGER_REJECTED",

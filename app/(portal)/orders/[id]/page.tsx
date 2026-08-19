@@ -20,6 +20,7 @@ import {
   PaymentForm,
   RejectedOrderActions,
   PendingOrderActions,
+  DraftOrderActions,
   ContractSigningStatusAction,
 } from "@/components/order-actions";
 export default async function OrderDetail({
@@ -298,6 +299,9 @@ export default async function OrderDetail({
               ["PENDING_SALES_MANAGER", "PENDING_FINANCE", "PENDING_ADMIN"].includes(order.approvalStatus) && (
                 <PendingOrderActions id={id} />
               )}
+            {canSalesOperate && order.approvalStatus === "DRAFT" && (
+              <DraftOrderActions id={id} />
+            )}
             {(canManager || canFinance || canAdmin) && (
               <ReviewActions id={id} />
             )}{" "}

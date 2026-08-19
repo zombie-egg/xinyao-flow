@@ -57,15 +57,16 @@ export async function POST(req: Request) {
     }
     const p = orderFormSchema.safeParse(Object.fromEntries(form.entries()));
     if (!p.success) return fail(p.error.issues[0].message, "VALIDATION_ERROR");
+    const saveDraft = form.get("intent") === "DRAFT";
     submittedContractNumber = p.data.contractNumber;
     const duplicate = await findOrderByNumber(p.data.contractNumber);
     if (duplicate) return duplicateOrderNumberResponse(duplicate);
     const file = form.get("contract");
-    if (!(file instanceof File) || !file.size)
+    if (!saveDraft && (!(file instanceof File) || !file.size))
       return fail("请上传合同文件", "CONTRACT_REQUIRED");
-    if (!contractFileTypes.has(file.type))
+    if (!saveDraft && file instanceof File && !contractFileTypes.has(file.type))
       return fail("合同仅支持 PDF、Word、JPG、PNG、WEBP", "INVALID_FILE_TYPE");
-    if (file.size > 10 * 1024 * 1024)
+    if (!saveDraft && file instanceof File && file.size > 10 * 1024 * 1024)
       return fail("合同文件不能超过 10MB", "FILE_TOO_LARGE");
     const customer = await db.customer.findUnique({
       where: { id: p.data.customerId },
@@ -116,7 +117,7 @@ export async function POST(req: Request) {
     });
     if (!financeCollaborator)
       return fail("订单协同人只能选择财务人员", "INVALID_CONTRACT_COLLABORATOR", 400);
-    const fileUrl = await saveUpload(file, {
+    const fileUrl = saveDraft ? null : await saveUpload(file as File, {
       prefix: "contract",
       subdirectory: "contracts",
       types: contractFileTypes,
@@ -124,10 +125,10 @@ export async function POST(req: Request) {
       optimizeImage: true,
     });
     const managerCreated = u.role.code === "SALES_MANAGER" || u.role.code === "ADMIN",
-      approvalStatus = managerCreated
+      approvalStatus = saveDraft ? "DRAFT" : managerCreated
         ? "PENDING_FINANCE"
         : "PENDING_SALES_MANAGER",
-      status = managerCreated ? "PENDING_FINANCE" : "PENDING_SALES_MANAGER",
+      status = saveDraft ? "DRAFT" : managerCreated ? "PENDING_FINANCE" : "PENDING_SALES_MANAGER",
       reviewFee = p.data.reviewFee || 0,
       otherExpense = p.data.otherExpense || 0,
       netOrderAmount =
@@ -173,10 +174,10 @@ export async function POST(req: Request) {
           originalExpenseNote: p.data.originalExpenseNote,
           contractDate: p.data.contractDate,
           fileUrl,
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-          status: "SUBMITTED",
+          fileName: file instanceof File && file.size ? file.name : null,
+          fileSize: file instanceof File && file.size ? file.size : null,
+          fileType: file instanceof File && file.size ? file.type : null,
+          status: saveDraft ? "DRAFT" : "SUBMITTED",
         },
       });
       const item = await tx.order.create({
@@ -215,13 +216,13 @@ export async function POST(req: Request) {
       await tx.operationLog.create({
         data: {
           userId: u.id,
-          action: "SUBMIT_ORDER",
+          action: saveDraft ? "SAVE_ORDER_DRAFT" : "SUBMIT_ORDER",
           module: "ORDER",
           targetId: item.id,
           description: `提交订单“${item.name}”审核，订单销售人员：${u.name}，客户：${customer.name}`,
         },
       });
-      const recipients = managerCreated
+      const recipients = saveDraft ? [] : managerCreated
         ? await tx.user.findMany({
             where: { department: { code: "FINANCE" }, status: "ACTIVE" },
           })

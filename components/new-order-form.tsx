@@ -528,7 +528,7 @@ export function NewOrderForm({
               type="file"
               accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp"
               className="mt-2 h-auto py-2"
-              required={!orderId}
+              required={false}
             />
             <span className="mt-1 block text-xs text-zinc-500">
               支持 PDF、Word、JPG、PNG、WEBP，最大 10MB。
@@ -623,12 +623,15 @@ export function NewOrderForm({
           </div>
         </div>
         <div className="mt-5">
-          <Button disabled={loading || netAmount < 0 || !showReceivable}>
+          <Button name="intent" value="SUBMIT" disabled={loading || netAmount < 0 || !showReceivable}>
             {loading
               ? "正在提交…"
               : orderId
                 ? "保存修改并重新提交审核"
                 : "提交订单审核"}
+          </Button>
+          <Button type="submit" name="intent" value="DRAFT" variant="outline" disabled={loading}>
+            {loading ? "正在保存…" : "保存草稿"}
           </Button>
           {message && (
             <span className="ml-3 text-sm text-zinc-500">{message}</span>
