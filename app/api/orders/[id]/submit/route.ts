@@ -15,7 +15,6 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     if (!order) return fail("订单不存在", "NOT_FOUND", 404);
     if (order.salesUserId !== user.id) throw new Error("FORBIDDEN");
     if (order.approvalStatus !== "DRAFT") return fail("只有草稿可以提交", "INVALID_STATE", 409);
-    if (!order.contract.fileUrl) return fail("请先编辑并上传合同附件后再提交", "CONTRACT_REQUIRED", 409);
     const managerCreated = user.role.code === "SALES_MANAGER" || user.role.code === "ADMIN";
     const approvalStatus = managerCreated ? "PENDING_FINANCE" : "PENDING_SALES_MANAGER";
     const updated = await db.$transaction(async (tx) => {
