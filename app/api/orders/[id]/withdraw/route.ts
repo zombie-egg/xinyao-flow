@@ -34,6 +34,9 @@ export async function POST(
         data: { approvalStatus: "DRAFT", status: "DRAFT" },
       });
       await tx.contract.update({ where: { id: order.contractId }, data: { status: "DRAFT" } });
+      await tx.notification.deleteMany({
+        where: { targetId: id, type: "APPROVAL", readAt: null },
+      });
       await tx.operationLog.create({
         data: {
           userId: user.id,
