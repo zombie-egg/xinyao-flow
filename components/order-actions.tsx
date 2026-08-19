@@ -77,6 +77,16 @@ export function PendingOrderActions({ id }: { id: string }) {
 export function DraftOrderActions({ id }: { id: string }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  async function submit() {
+    if (!confirm("确定直接提交这个草稿进行审核吗？")) return;
+    setLoading(true);
+    const res = await fetch(`/api/orders/${id}/submit`, { method: "POST" });
+    const body = await res.json();
+    setLoading(false);
+    if (!res.ok) return setMessage(body.message || "提交失败");
+    router.refresh();
+  }
   async function remove() {
     if (!confirm("确定删除这个订单草稿吗？删除后不能恢复。")) return;
     const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
@@ -85,9 +95,10 @@ export function DraftOrderActions({ id }: { id: string }) {
     router.refresh();
   }
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Link href={`/orders/${id}/edit`} className="inline-flex h-10 items-center rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white">编辑并提交</Link>
-      <Button type="button" variant="outline" onClick={remove}>删除草稿</Button>
+    <div className="flex w-full gap-2">
+      <Link href={`/orders/${id}/edit`} className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-lg border bg-white px-2 text-sm font-medium hover:bg-zinc-50">编辑</Link>
+      <Button type="button" variant="outline" className="min-w-0 flex-1 px-2" onClick={submit} disabled={loading}>{loading ? "提交中…" : "提交"}</Button>
+      <Button type="button" variant="outline" className="min-w-0 flex-1 px-2" onClick={remove}>删除</Button>
       {message && <span className="text-sm text-red-600">{message}</span>}
     </div>
   );
