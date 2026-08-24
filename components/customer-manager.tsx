@@ -554,6 +554,16 @@ export function CustomerManager({
             <div className="md:col-span-2">
               <Button disabled={saving}>{saving ? "保存中..." : "保存客户"}</Button>
               {message && <p className="self-center text-sm text-red-600">{message}</p>}
+              {duplicates.length > 0 && message.includes("重复") && (
+                <div className="mt-2 max-w-2xl rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
+                  <p className="font-medium text-red-700">匹配到以下客户，请核对后再保存：</p>
+                  {duplicates.slice(0, 10).map((item) => (
+                    <Link key={item.id} href={`/customers/${item.id}`} className="mt-1 block text-red-700 underline">
+                      {item.name} · 联系人：{item.contact} · 电话：{item.phone} · 负责人：{item.owner?.name || "公海池"}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </form>
         </Card>

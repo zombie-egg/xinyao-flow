@@ -153,7 +153,7 @@ export async function POST(req: Request) {
     const customer = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('customer-create'))`;
       const recheck = await findDuplicates(data, tx);
-      if (recheck.length) throw new Error("CUSTOMER_EXISTS");
+      if (recheck.length) throw new Error(`CUSTOMER_EXISTS:${JSON.stringify(recheck)}`);
       return tx.customer.create({
         data: {
           ...customerData,
@@ -189,6 +189,8 @@ export async function POST(req: Request) {
     });
     return ok(customer, 201);
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("CUSTOMER_EXISTS:"))
+      return fail(error.message.slice("CUSTOMER_EXISTS:".length), "CUSTOMER_DUPLICATES", 409);
     if (error instanceof Error && error.message === "CUSTOMER_EXISTS")
       return fail("数据库中已有重复客户，请使用查重功能查看", "CUSTOMER_EXISTS", 409);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
