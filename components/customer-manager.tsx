@@ -397,14 +397,24 @@ export function CustomerManager({
   params: Record<string, string | undefined>;
 }) {
   const router = useRouter();
-  const [show, setShow] = useState(Boolean(returnTo));
-  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [show, setShow] = useState(Boolean(returnTo) || params.panel === "create");
+  const [showDuplicates, setShowDuplicates] = useState(params.panel === "duplicates");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [duplicateQuery, setDuplicateQuery] = useState("");
   const [duplicates, setDuplicates] = useState<Customer[]>([]);
   const editing = items.find((item) => item.id === editingId);
+
+  useEffect(() => {
+    if (params.panel === "create") {
+      setShow(true);
+      setShowDuplicates(false);
+    } else if (params.panel === "duplicates") {
+      setShow(false);
+      setShowDuplicates(true);
+    }
+  }, [params.panel]);
 
   useEffect(() => {
     const toggleCreate = () => {

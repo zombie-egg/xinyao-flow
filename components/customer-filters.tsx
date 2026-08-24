@@ -22,6 +22,14 @@ export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool 
     const query = next.toString();
     return query ? `/customers?${query}` : "/customers";
   };
+  const panelHref = (panel: "duplicates" | "create") => {
+    const next = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value && key !== "panel") next.set(key, value);
+    });
+    next.set("panel", panel);
+    return `/customers?${next.toString()}`;
+  };
   return (
     <div className="mb-5 space-y-3">
       <div className="flex items-center gap-3">
@@ -29,7 +37,7 @@ export function CustomerFilters({ params, salesUsers, canCreate, showPublicPool 
           {quickItems.map(([value, label]) => <Link key={value} href={toggleQuickHref(value)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${quick === value ? "bg-zinc-950 text-white" : "border bg-white text-zinc-600"}`}>{label}</Link>)}
           <button type="button" onClick={() => setOpen(!open)} className={`inline-flex shrink-0 items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-medium ${open ? "text-zinc-950" : "text-zinc-600"}`}>全部筛选<ChevronDown size={14} className={`transition ${open ? "rotate-180" : ""}`} /></button>
         </div>
-        {canCreate && <div className="ml-auto flex shrink-0 gap-1.5"><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("customer:toggle-duplicates"))} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">客户查重</button><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("customer:toggle-create"))} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">新建客户</button><Link href="/api/customers/export" className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">导出 CSV</Link><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("data-import:toggle-customers"))} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">导入数据</button></div>}
+        {canCreate && <div className="ml-auto flex shrink-0 gap-1.5"><Link href={panelHref("duplicates")} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">客户查重</Link><Link href={panelHref("create")} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">新建客户</Link><Link href="/api/customers/export" className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">导出 CSV</Link><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("data-import:toggle-customers"))} className="inline-flex h-9 min-w-20 items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50">导入数据</button></div>}
       </div>
       {open && <form className="rounded-xl border bg-white p-4">
         {params.return && <input type="hidden" name="return" value={params.return} />}
