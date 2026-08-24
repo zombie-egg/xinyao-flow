@@ -404,6 +404,7 @@ export function CustomerManager({
   const [saving, setSaving] = useState(false);
   const [duplicateQuery, setDuplicateQuery] = useState("");
   const [duplicates, setDuplicates] = useState<Customer[]>([]);
+  const [duplicateMessage, setDuplicateMessage] = useState("");
   const editing = items.find((item) => item.id === editingId);
 
   useEffect(() => {
@@ -467,6 +468,7 @@ export function CustomerManager({
             setDuplicates(JSON.parse(body.message));
           } catch {}
           setShowDuplicates(true);
+          setDuplicateMessage("发现重复客户，请先核对下面的查重结果");
           setMessage("发现重复客户，请先核对下面的查重结果");
         } else {
           setMessage(body.message || `保存失败（${res.status}）`);
@@ -495,11 +497,11 @@ export function CustomerManager({
     );
     const body = await res.json();
     if (!res.ok) {
-      setMessage(body.message);
+      setDuplicateMessage(body.message || "查重失败，请稍后重试");
       return;
     }
     setDuplicates(body.data);
-    setMessage(
+    setDuplicateMessage(
       body.data.length
         ? `发现 ${body.data.length} 条可能重复客户`
         : "未发现重复客户",
@@ -520,6 +522,7 @@ export function CustomerManager({
               查重
             </Button>
           </div>
+          {duplicateMessage && <p className={`mt-2 text-sm ${duplicates.length ? "text-red-600" : "text-emerald-600"}`}>{duplicateMessage}</p>}
           {duplicates.length > 0 && (
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {duplicates.slice(0, 10).map((item) => (

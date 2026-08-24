@@ -18,13 +18,12 @@ function duplicateTerms(data: {
   contactInfo?: string;
   contactMethods: { value: string }[];
 }) {
-  return [...new Set([
-    normalizeCustomerField(data.name),
-    normalizeCustomerField(data.contact),
-    normalizeCustomerField(data.phone),
-    ...(data.contactInfo ? [normalizeCustomerField(data.contactInfo)] : []),
-    ...data.contactMethods.map((item) => normalizeCustomerField(item.value)),
-  ].filter(Boolean))];
+  return {
+    name: normalizeCustomerName(data.name),
+    contact: normalizeCustomerContact(data.contact),
+    phone: normalizeCustomerPhone(data.phone),
+    extra: [...(data.contactInfo ? [normalizeCustomerField(data.contactInfo)] : []), ...data.contactMethods.map((item) => normalizeCustomerField(item.value))].filter(Boolean),
+  };
 }
 
 async function findDuplicates(
@@ -35,10 +34,10 @@ async function findDuplicates(
   return client.customer.findMany({
     where: {
       OR: [
-        { nameNormalized: { in: terms } },
-        { contactNormalized: { in: terms } },
-        { phoneNormalized: { in: terms } },
-        ...terms.flatMap((term) => [
+        { nameNormalized: terms.name },
+        { contactNormalized: terms.contact },
+        { phoneNormalized: terms.phone },
+        ...terms.extra.flatMap((term) => [
           { contactInfo: { contains: term, mode: "insensitive" as const } },
           { contactMethods: { some: { normalized: term } } },
         ]),
