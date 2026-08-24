@@ -56,12 +56,7 @@ export async function PATCH(
         id: { not: id },
         category: data.category,
         OR: [
-          { nameNormalized: normalizeCustomerName(data.name) },
-          { contactNormalized: normalizeCustomerContact(data.contact) },
-          { phoneNormalized: normalizeCustomerPhone(data.phone) },
-          ...data.contactMethods.map((item) => ({
-            contactMethods: { some: { normalized: normalizeCustomerField(item.value) } },
-          })),
+          { name: { equals: data.name.trim(), mode: "insensitive" as const } },
         ],
       },
       select: { id: true },

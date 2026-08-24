@@ -11,36 +11,14 @@ import {
 } from "@/lib/customer";
 import { customerAccessWhere } from "@/lib/customer-access";
 
-function duplicateTerms(data: {
-  name: string;
-  contact: string;
-  phone: string;
-  contactInfo?: string;
-  contactMethods: { value: string }[];
-}) {
-  return {
-    name: normalizeCustomerName(data.name),
-    contact: normalizeCustomerContact(data.contact),
-    phone: normalizeCustomerPhone(data.phone),
-    extra: [...(data.contactInfo ? [normalizeCustomerField(data.contactInfo)] : []), ...data.contactMethods.map((item) => normalizeCustomerField(item.value))].filter(Boolean),
-  };
-}
-
 async function findDuplicates(
-  data: Parameters<typeof duplicateTerms>[0],
+  data: { name: string },
   client: Pick<typeof db, "customer"> = db,
 ) {
-  const terms = duplicateTerms(data);
   return client.customer.findMany({
     where: {
       OR: [
-        { nameNormalized: terms.name },
-        { contactNormalized: terms.contact },
-        { phoneNormalized: terms.phone },
-        ...terms.extra.flatMap((term) => [
-          { contactInfo: { contains: term, mode: "insensitive" as const } },
-          { contactMethods: { some: { normalized: term } } },
-        ]),
+        { name: { equals: data.name.trim(), mode: "insensitive" as const } },
       ],
     },
     select: {
@@ -69,11 +47,6 @@ export async function GET(req: Request) {
       ? {
           OR: [
             { name: { contains: search, mode: "insensitive" as const } },
-            { contact: { contains: search, mode: "insensitive" as const } },
-            { phone: { contains: search } },
-            { contactInfo: { contains: search, mode: "insensitive" as const } },
-            { pendingOwnerName: { contains: search, mode: "insensitive" as const } },
-            { contactMethods: { some: { value: { contains: search, mode: "insensitive" as const } } } },
           ],
         }
       : {};
