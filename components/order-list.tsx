@@ -29,7 +29,7 @@ type Item = {
   orderNumber: string | null;
   name: string;
   amount: unknown;
-  contract: { netOrderAmount: unknown };
+  contract: { netOrderAmount: unknown; technicalSupportFee: unknown; outsourcingFee: unknown; reviewFee: unknown };
   approvalStatus: string;
   invoiceStatus: string;
   invoiceApplicationStatus: string;
@@ -64,6 +64,7 @@ export function OrderList({
               <FilterHeader label="客户" active={Boolean(params.customerQuery)}><input name="customerQuery" defaultValue={params.customerQuery} placeholder="输入客户关键词" className="h-9 w-full rounded-lg border px-2 text-xs" /></FilterHeader>
               <FilterHeader label="销售人员" active={Boolean(params.salesUserId)}><select name="salesUserId" defaultValue={params.salesUserId || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部销售人员</option>{salesUsers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FilterHeader>
               <FilterHeader label="金额" active={Boolean(params.amountMin || params.amountMax)}><div className="grid grid-cols-2 gap-2"><input name="amountMin" type="number" step="0.01" defaultValue={params.amountMin} placeholder="最低" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /><input name="amountMax" type="number" step="0.01" defaultValue={params.amountMax} placeholder="最高" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /></div></FilterHeader>
+              <th className="px-4 py-3 font-medium">信息费</th><th className="px-4 py-3 font-medium">外包费</th><th className="px-4 py-3 font-medium">评审费</th>
               <FilterHeader label="净签单金额" active={Boolean(params.netAmountMin || params.netAmountMax)}><div className="grid grid-cols-2 gap-2"><input name="netAmountMin" type="number" step="0.01" defaultValue={params.netAmountMin} placeholder="最低" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /><input name="netAmountMax" type="number" step="0.01" defaultValue={params.netAmountMax} placeholder="最高" className="h-9 min-w-0 rounded-lg border px-2 text-xs" /></div></FilterHeader>
               <FilterHeader label="审核状态" active={Boolean(params.approvalStatus)}><select name="approvalStatus" defaultValue={params.approvalStatus || ""} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="">全部审核状态</option><option value="PENDING_SALES_MANAGER">等待销售经理</option><option value="PENDING_FINANCE">等待财务</option><option value="PENDING_ADMIN">等待管理员</option><option value="APPROVED">审核通过</option><option value="REJECTED">审核拒绝</option></select></FilterHeader>
               <FilterHeader label="订单状态" active={Boolean(params.status && params.status !== "ALL")}><select name="status" defaultValue={params.status || "ALL"} className="h-9 w-full rounded-lg border bg-white px-2 text-xs"><option value="ALL">全部订单状态</option><option value="PROCESSING">处理中</option><option value="COMPLETED">已完成</option></select></FilterHeader>
@@ -86,6 +87,9 @@ export function OrderList({
                 <td className="px-4">{x.customer.name}</td>
                 <td className="px-4">{x.historicalSalesName || x.salesUser.name}</td>
                 <td className="px-4">{money(Number(x.amount))}</td>
+                <td className="px-4">{money(Number(x.contract.technicalSupportFee))}</td>
+                <td className="px-4">{money(Number(x.contract.outsourcingFee))}</td>
+                <td className="px-4">{money(Number(x.contract.reviewFee))}</td>
                 <td className="px-4">{money(Number(x.contract.netOrderAmount))}</td>
                 <td className="px-4">
                   <Badge>

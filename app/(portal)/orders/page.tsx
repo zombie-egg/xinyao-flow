@@ -33,7 +33,7 @@ export default async function Orders({
       : u.role.code === "SALES_MANAGER"
       ? { AND: [{ approvalStatus: { not: "DRAFT" as const } }, { salesUser: { departmentId: u.departmentId } }] }
       : u.role.code === "SALES_EMPLOYEE"
-        ? { OR: [{ salesUserId: u.id }, { approvalStatus: { not: "DRAFT" as const }, customer: { ownerId: u.id } }, { approvalStatus: { not: "DRAFT" as const }, customer: { collaborators: { some: { userId: u.id } } } }] }
+        ? { OR: [{ salesUserId: u.id, approvalStatus: { not: "DRAFT" as const } }, { approvalStatus: { not: "DRAFT" as const }, customer: { ownerId: u.id } }, { approvalStatus: { not: "DRAFT" as const }, customer: { collaborators: { some: { userId: u.id } } } }] }
       : u.role.code === "TECH_MANAGER"
         ? { historicalSalesName: null, approvalStatus: "APPROVED" as const }
         : u.role.code === "TECH_EMPLOYEE"
@@ -114,7 +114,7 @@ export default async function Orders({
     : { AND: [baseWhere, statusWhere, searchWhere, extraWhere] };
   const [items, total, salesUsers, amountTotals, netTotals] = await Promise.all([db.order.findMany({
     where,
-    select: { id: true, salesUserId: true, orderNumber: true, name: true, amount: true, approvalStatus: true, invoiceStatus: true, invoiceApplicationStatus: true, paymentStatus: true, status: true, createdAt: true, historicalSalesName: true, customer: { select: { id: true, name: true, collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } }, contract: { select: { netOrderAmount: true } } },
+    select: { id: true, salesUserId: true, orderNumber: true, name: true, amount: true, approvalStatus: true, invoiceStatus: true, invoiceApplicationStatus: true, paymentStatus: true, status: true, createdAt: true, historicalSalesName: true, customer: { select: { id: true, name: true, collaborators: { select: { userId: true } } } }, salesUser: { select: { name: true } }, contract: { select: { netOrderAmount: true, technicalSupportFee: true, outsourcingFee: true, reviewFee: true } } },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
