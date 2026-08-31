@@ -4,6 +4,7 @@ import { requirePermission, requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { saveUpload } from "@/lib/uploads";
 import { contractFileTypes, orderFormSchema } from "@/lib/order-input";
+import { calculateNetAmount } from "@/lib/money";
 import { duplicateOrderNumberResponse, findOrderByNumber } from "@/lib/order-number";
 export const runtime = "nodejs";
 export async function GET() {
@@ -129,14 +130,15 @@ export async function POST(req: Request) {
         ? "PENDING_FINANCE"
         : "PENDING_SALES_MANAGER",
       status = saveDraft ? "DRAFT" : managerCreated ? "PENDING_FINANCE" : "PENDING_SALES_MANAGER",
-      reviewFee = p.data.reviewFee || 0,
-      otherExpense = p.data.otherExpense || 0,
-      netOrderAmount =
-        p.data.amount -
-        p.data.technicalSupportFee -
-        p.data.outsourcingFee -
-        reviewFee -
-        otherExpense;
+      reviewFee = p.data.reviewFee || "0.00",
+      otherExpense = p.data.otherExpense || "0.00",
+      netOrderAmount = calculateNetAmount({
+        amount: p.data.amount,
+        technicalSupportFee: p.data.technicalSupportFee,
+        outsourcingFee: p.data.outsourcingFee,
+        reviewFee,
+        otherExpense,
+      });
     const order = await db.$transaction(async (tx) => {
       const contractNumber = p.data.contractNumber;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order-number-${contractNumber.toLowerCase()}`}))`;
@@ -161,7 +163,7 @@ export async function POST(req: Request) {
           signerId: u.id,
           responsibleUserId: u.id,
           collaboratorId: p.data.collaboratorId,
-          productTotal: p.data.productTotal ?? 0,
+          productTotal: p.data.productTotal ?? "0.00",
           amount: p.data.amount,
           dealPrice: p.data.amount,
           technicalSupportFee: p.data.technicalSupportFee,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { calculateNetAmountCents, isMoney, normalizeMoney } from "./money";
 
 const optionalText = (max: number) =>
   z.preprocess(
@@ -6,10 +7,27 @@ const optionalText = (max: number) =>
     z.string().trim().max(max, `内容不能超过 ${max} 个字`).optional(),
   );
 
-const optionalNumber = z.preprocess(
+const optionalMoney = z.preprocess(
   (value) => (value === "" || value == null ? undefined : value),
-  z.coerce.number({ error: "请输入正确的金额" }).nonnegative("金额不能小于 0").optional(),
+  z.string({ error: "请输入正确的金额" })
+    .trim()
+    .refine(isMoney, "金额必须是最多两位小数的非负数")
+    .transform(normalizeMoney)
+    .optional(),
 );
+
+const requiredMoney = (missingMessage: string, positiveMessage?: string) =>
+  z.preprocess(
+    (value) => (typeof value === "number" ? String(value) : value),
+    z.string({ error: missingMessage })
+      .trim()
+      .refine(isMoney, "金额必须是最多两位小数的非负数")
+      .transform(normalizeMoney)
+      .refine(
+        (value) => !positiveMessage || value !== "0.00",
+        positiveMessage || missingMessage,
+      ),
+  );
 
 export const orderNameOptions = [
   "年度检测",
@@ -34,15 +52,15 @@ export const orderFormSchema = z
     businessType: z.enum(["ENVIRONMENTAL_MONITORING", "PUBLIC_HEALTH", "OCCUPATIONAL_HEALTH"], {
       error: "请选择业务类型",
     }),
-    productTotal: optionalNumber,
-    amount: z.coerce.number({ error: "请输入合同金额" }).positive("合同金额必须大于 0"),
-    technicalSupportFee: z.coerce.number({ error: "请输入技术支持费用" }).nonnegative("技术支持费用不能小于 0"),
-    outsourcingFee: z.coerce.number({ error: "请输入外包费用" }).nonnegative("外包费用不能小于 0"),
-    reviewFee: optionalNumber,
-    otherExpense: optionalNumber,
+    productTotal: optionalMoney,
+    amount: requiredMoney("请输入合同金额", "合同金额必须大于 0"),
+    technicalSupportFee: requiredMoney("请输入技术支持费用"),
+    outsourcingFee: requiredMoney("请输入外包费用"),
+    reviewFee: optionalMoney,
+    otherExpense: optionalMoney,
     expenseDetails: optionalText(3000),
     originalExpenseNote: optionalText(3000),
-    adjustedNetAmount: optionalNumber,
+    adjustedNetAmount: optionalMoney,
     signingStatus: z.enum(["SIGNED", "PENDING_SIGNATURE"], {
       error: "请选择合同状态",
     }),
@@ -52,7 +70,7 @@ export const orderFormSchema = z
     collaboratorId: z.string().min(1, "请选择订单协同人"),
     projectRequirements: optionalText(10000),
     remark: optionalText(2000),
-    receivableAmount: z.coerce.number({ error: "请输入应收金额" }).positive("应收金额必须大于 0"),
+    receivableAmount: requiredMoney("请输入应收金额", "应收金额必须大于 0"),
     receivableExpectedDate: z.coerce.date({ error: "请选择预计回款日期" }),
     receivablePaymentType: optionalText(100),
     receivableRemark: optionalText(1000),
@@ -60,12 +78,14 @@ export const orderFormSchema = z
     receivableCollaboratorUserId: optionalText(100),
   })
   .superRefine((value, ctx) => {
-    const expenses =
-      value.technicalSupportFee +
-      value.outsourcingFee +
-      (value.reviewFee || 0) +
-      (value.otherExpense || 0);
-    if (expenses > value.amount)
+    const netAmount = calculateNetAmountCents({
+      amount: value.amount,
+      technicalSupportFee: value.technicalSupportFee,
+      outsourcingFee: value.outsourcingFee,
+      reviewFee: value.reviewFee || "0.00",
+      otherExpense: value.otherExpense || "0.00",
+    });
+    if (netAmount !== null && netAmount < 0)
       ctx.addIssue({
         code: "custom",
         path: ["amount"],

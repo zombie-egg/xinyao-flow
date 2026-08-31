@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { Prisma } from "@prisma/client";
 import { haversineMeters, startOfChinaDay } from "../lib/utils";
 import { cleanPublicValue } from "../lib/public-config";
 import { safeUploadPath } from "../lib/uploads";
@@ -13,6 +14,7 @@ import { businessOrderStatus, isOrderCompleted } from "../lib/order-workflow";
 import {chinaDateNumber,documentNumber} from '../lib/document-number';
 import {normalizeCustomerContact} from '../lib/customer';
 import { orderFormSchema } from "../lib/order-input";
+import { calculateNetAmount, centsToMoney, moneyToCents } from "../lib/money";
 import { canEditCustomerProfile, canOperateCustomerSalesFlow, customerAccessWhere, customerBusinessAccess } from "../lib/customer-access";
 import { customerSchema } from "../lib/customer-input";
 import { statisticsDateRange, statisticsOrderWhere } from "../lib/statistics";
@@ -134,6 +136,67 @@ describe("订单业务状态", () => {
 });
 describe('编号与客户去重',()=>{it('按日期、流水和销售工号生成合同与订单编号',()=>{expect(documentNumber('XYXS01','20260810',1)).toBe('2026081001XYXS01');expect(chinaDateNumber(new Date('2026-08-10T03:00:00Z'))).toBe('20260810')});it('联系人忽略空格和大小写',()=>expect(normalizeCustomerContact(' Jeffrey ')).toBe('jeffrey'))});
 describe("订单表单", () => {
+  const validOrder = (amount: string, fees = ["0", "0", "0", "0"]) => ({
+    customerId: "customer",
+    contractNumber: "HT-MONEY-TEST",
+    name: "年度检测",
+    businessType: "ENVIRONMENTAL_MONITORING",
+    productTotal: amount,
+    amount,
+    technicalSupportFee: fees[0],
+    outsourcingFee: fees[1],
+    reviewFee: fees[2],
+    otherExpense: fees[3],
+    adjustedNetAmount: "",
+    signingStatus: "SIGNED",
+    contractDate: "2026-08-31",
+    signerId: "signer",
+    responsibleUserId: "responsible",
+    collaboratorId: "collaborator",
+    projectRequirements: "金额精度回归测试",
+    receivableAmount: amount,
+    receivableExpectedDate: "2026-09-30",
+    receivableResponsibleUserId: "finance-owner",
+  });
+
+  it.each(["800", "0.01", "799.99", "1000.10", "1234.56"])(
+    "金额 %s 按分精确解析、显示并提交为两位小数",
+    (amount) => {
+      const parsed = orderFormSchema.safeParse(validOrder(amount));
+      expect(parsed.success).toBe(true);
+      if (!parsed.success) return;
+      expect(parsed.data.amount).toBe(centsToMoney(moneyToCents(amount)));
+      expect(parsed.data.receivableAmount).toBe(parsed.data.amount);
+      expect(new Prisma.Decimal(parsed.data.amount).toFixed(2)).toBe(parsed.data.amount);
+      expect(calculateNetAmount({
+        amount: parsed.data.amount,
+        technicalSupportFee: parsed.data.technicalSupportFee,
+        outsourcingFee: parsed.data.outsourcingFee,
+        reviewFee: parsed.data.reviewFee || "0.00",
+        otherExpense: parsed.data.otherExpense || "0.00",
+      })).toBe(parsed.data.amount);
+    },
+  );
+
+  it("合同金额 800 扣除 100、50、20、10 后净签单金额为 620.00", () => {
+    const parsed = orderFormSchema.safeParse(
+      validOrder("800", ["100", "50", "20", "10"]),
+    );
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(calculateNetAmount({
+      amount: parsed.data.amount,
+      technicalSupportFee: parsed.data.technicalSupportFee,
+      outsourcingFee: parsed.data.outsourcingFee,
+      reviewFee: parsed.data.reviewFee || "0.00",
+      otherExpense: parsed.data.otherExpense || "0.00",
+    })).toBe("620.00");
+  });
+
+  it("拒绝超过两位小数，避免数据库静默舍入", () => {
+    expect(orderFormSchema.safeParse(validOrder("799.999")).success).toBe(false);
+  });
+
   it("销售经理提交完整订单和应收款时可通过校验", () => {
     const result = orderFormSchema.safeParse({
       customerId: "customer",

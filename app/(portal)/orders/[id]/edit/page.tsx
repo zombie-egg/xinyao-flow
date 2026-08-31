@@ -65,16 +65,16 @@ export default async function EditRejectedOrder({
     customerId: order.customerId,
     contractNumber: order.contract.contractNumber,
     businessType: order.contract.businessType,
-    productTotal: Number(order.contract.productTotal),
-    amount: Number(order.contract.amount),
-    technicalSupportFee: Number(order.contract.technicalSupportFee),
-    outsourcingFee: Number(order.contract.outsourcingFee),
-    reviewFee: Number(order.contract.reviewFee),
-    otherExpense: Number(order.contract.otherExpense),
+    productTotal: order.contract.productTotal.toFixed(2),
+    amount: order.contract.amount.toFixed(2),
+    technicalSupportFee: order.contract.technicalSupportFee.toFixed(2),
+    outsourcingFee: order.contract.outsourcingFee.toFixed(2),
+    reviewFee: order.contract.reviewFee.toFixed(2),
+    otherExpense: order.contract.otherExpense.toFixed(2),
     adjustedNetAmount:
       order.contract.adjustedNetAmount == null
         ? null
-        : Number(order.contract.adjustedNetAmount),
+        : order.contract.adjustedNetAmount.toFixed(2),
     expenseDetails: order.contract.expenseDetails,
     originalExpenseNote: order.contract.originalExpenseNote,
     name: order.name,
@@ -90,7 +90,7 @@ export default async function EditRejectedOrder({
     receivable: order.receivable
       ? {
           number: order.receivable.number,
-          amount: Number(order.receivable.amount),
+          amount: order.receivable.amount.toFixed(2),
           expectedDate: order.receivable.expectedDate.toLocaleDateString(
             "en-CA",
             { timeZone: "Asia/Shanghai" },

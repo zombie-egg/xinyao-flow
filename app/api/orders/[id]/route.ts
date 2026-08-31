@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
 import { saveUpload } from "@/lib/uploads";
 import { contractFileTypes, orderFormSchema } from "@/lib/order-input";
+import { calculateNetAmount } from "@/lib/money";
 import { duplicateOrderNumberResponse, findOrderByNumber } from "@/lib/order-number";
 
 export const runtime = "nodejs";
@@ -149,14 +150,15 @@ export async function PATCH(
     const approvalStatus = saveDraft ? "DRAFT" : managerCreated
       ? ("PENDING_FINANCE" as const)
       : ("PENDING_SALES_MANAGER" as const);
-    const reviewFee = data.reviewFee || 0;
-    const otherExpense = data.otherExpense || 0;
-    const netOrderAmount =
-      data.amount -
-      data.technicalSupportFee -
-      data.outsourcingFee -
-      reviewFee -
-      otherExpense;
+    const reviewFee = data.reviewFee || "0.00";
+    const otherExpense = data.otherExpense || "0.00";
+    const netOrderAmount = calculateNetAmount({
+      amount: data.amount,
+      technicalSupportFee: data.technicalSupportFee,
+      outsourcingFee: data.outsourcingFee,
+      reviewFee,
+      otherExpense,
+    });
 
     const updated = await db.$transaction(
       async (tx) => {
@@ -183,7 +185,7 @@ export async function PATCH(
             signerId: lockedSignerId,
             responsibleUserId: lockedResponsibleId,
             collaboratorId: data.collaboratorId,
-            productTotal: data.productTotal ?? 0,
+            productTotal: data.productTotal ?? "0.00",
             amount: data.amount,
             dealPrice: data.amount,
             technicalSupportFee: data.technicalSupportFee,

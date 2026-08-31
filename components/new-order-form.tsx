@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { orderNameOptions } from "@/lib/order-input";
+import { calculateNetAmountCents, centsToMoney } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -28,13 +29,13 @@ export type OrderFormInitial = {
   customerId: string;
   contractNumber: string | null;
   businessType: "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH";
-  productTotal: number;
-  amount: number;
-  technicalSupportFee: number;
-  outsourcingFee: number;
-  reviewFee: number;
-  otherExpense: number;
-  adjustedNetAmount: number | null;
+  productTotal: string;
+  amount: string;
+  technicalSupportFee: string;
+  outsourcingFee: string;
+  reviewFee: string;
+  otherExpense: string;
+  adjustedNetAmount: string | null;
   expenseDetails: string | null;
   originalExpenseNote: string | null;
   name: string;
@@ -47,7 +48,7 @@ export type OrderFormInitial = {
   remark: string | null;
   receivable: {
     number: string;
-    amount: number;
+    amount: string;
     expectedDate: string;
     paymentType: string | null;
     remark: string | null;
@@ -218,13 +219,13 @@ export function NewOrderForm({
     [loading, setLoading] = useState(false),
     [showReceivable, setShowReceivable] = useState(true),
     [receivableTouched, setReceivableTouched] = useState(Boolean(initial?.receivable)),
-    [receivableAmount, setReceivableAmount] = useState(initial?.receivable ? String(initial.receivable.amount) : initial ? String(initial.amount) : ""),
+    [receivableAmount, setReceivableAmount] = useState(initial?.receivable?.amount || initial?.amount || ""),
     [amounts, setAmounts] = useState({
-      amount: initial ? String(initial.amount) : "",
-      technicalSupportFee: String(initial?.technicalSupportFee ?? 0),
-      outsourcingFee: String(initial?.outsourcingFee ?? 0),
-      reviewFee: String(initial?.reviewFee ?? 0),
-      otherExpense: String(initial?.otherExpense ?? 0),
+      amount: initial?.amount || "",
+      technicalSupportFee: initial?.technicalSupportFee || "0.00",
+      outsourcingFee: initial?.outsourcingFee || "0.00",
+      reviewFee: initial?.reviewFee || "0.00",
+      otherExpense: initial?.otherExpense || "0.00",
     }),
     selected = customers.find((c) => c.id === customerId),
     customerLocked = Boolean(initialCustomerId && selected && !orderId),
@@ -233,15 +234,8 @@ export function NewOrderForm({
         .toLowerCase()
         .includes(customerSearch.toLowerCase()),
     ),
-    netAmount = useMemo(
-      () =>
-        Number(amounts.amount || 0) -
-        Number(amounts.technicalSupportFee || 0) -
-        Number(amounts.outsourcingFee || 0) -
-        Number(amounts.reviewFee || 0) -
-        Number(amounts.otherExpense || 0),
-      [amounts],
-    );
+    netAmountCents = useMemo(() => calculateNetAmountCents(amounts), [amounts]),
+    netAmount = netAmountCents === null ? "" : centsToMoney(netAmountCents);
   async function checkContractNumber(value: string) {
     const number = value.trim();
     if (!number) {
@@ -263,9 +257,9 @@ export function NewOrderForm({
         {required ? <RequiredLabel>{label}</RequiredLabel> : label}
         <Input
           name={name}
-          type="number"
-          min="0"
-          step="0.01"
+          type="text"
+          inputMode="decimal"
+          pattern="[0-9]+([.][0-9]{1,2})?"
           value={amounts[name]}
           onChange={(e) => {
             setAmounts({ ...amounts, [name]: e.target.value });
@@ -417,18 +411,18 @@ export function NewOrderForm({
           <label className="text-sm">
             净签单金额
             <Input
-              value={netAmount.toFixed(2)}
+              value={netAmount}
               readOnly
-              className={`mt-2 bg-zinc-50 ${netAmount < 0 ? "text-red-600" : ""}`}
+              className={`mt-2 bg-zinc-50 ${(netAmountCents ?? 0) < 0 ? "text-red-600" : ""}`}
             />
           </label>
           <label className="text-sm">
             变更净签单金额的备用栏
             <Input
               name="adjustedNetAmount"
-              type="number"
-              min="0"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]+([.][0-9]{1,2})?"
               className="mt-2"
               defaultValue={initial?.adjustedNetAmount ?? ""}
             />
@@ -566,9 +560,9 @@ export function NewOrderForm({
             <RequiredLabel>应收金额</RequiredLabel>
             <Input
               name="receivableAmount"
-              type="number"
-              min="0.01"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]+([.][0-9]{1,2})?"
               className="mt-2"
               value={receivableAmount}
               onChange={(event) => { setReceivableTouched(true); setReceivableAmount(event.target.value); }}
@@ -625,7 +619,7 @@ export function NewOrderForm({
           </div>
         </div>
         <div className="mt-5">
-          <Button name="intent" value="SUBMIT" disabled={loading || netAmount < 0 || !showReceivable}>
+          <Button name="intent" value="SUBMIT" disabled={loading || (netAmountCents ?? 0) < 0 || !showReceivable}>
             {loading
               ? "正在提交…"
               : orderId
