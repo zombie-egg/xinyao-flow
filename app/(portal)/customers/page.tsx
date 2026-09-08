@@ -2,12 +2,12 @@ import { requirePermission } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader, Empty } from "@/components/page";
 import { CustomerManager } from "@/components/customer-manager";
-import { canViewAllCustomers, customerAccessWhere, hasSalesCapabilities } from "@/lib/customer-access";
+import { canViewAllCustomers, hasSalesCapabilities } from "@/lib/customer-access";
 import { CustomerFilters } from "@/components/customer-filters";
 import { DataImportExport } from "@/components/data-import-export";
 import { Pagination } from "@/components/pagination";
-import { flexiblePeriodRange } from "@/lib/period-range";
 import { cachedSalesUsers } from "@/lib/cached-data";
+import { customerWhere } from "@/lib/customer-query";
 
 export default async function Customers({
   searchParams,
@@ -19,62 +19,7 @@ export default async function Customers({
   const pageSize = 25;
   const page = Math.max(1, Number(params.page) || 1);
   const q = params.q?.trim() || "";
-  const access = customerAccessWhere(user);
-  const now = new Date();
-  const todayStart = new Date(now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }) + "T00:00:00+08:00");
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const filters = {
-    ownership: params.ownership,
-    category: params.category,
-    status: params.customerStatus,
-    nature: params.nature,
-    ownerId: params.ownerId,
-    businessLine: params.businessLine,
-    industry: params.industry,
-    createdFromMode: params.createdFromMode,
-    createdFromValue: params.createdFromValue,
-    createdToMode: params.createdToMode,
-    createdToValue: params.createdToValue,
-    updatedFromMode: params.updatedFromMode,
-    updatedFromValue: params.updatedFromValue,
-    updatedToMode: params.updatedToMode,
-    updatedToValue: params.updatedToValue,
-  };
-  const createdRange = flexiblePeriodRange(filters.createdFromMode, filters.createdFromValue, filters.createdToMode, filters.createdToValue);
-  const updatedRange = flexiblePeriodRange(filters.updatedFromMode, filters.updatedFromValue, filters.updatedToMode, filters.updatedToValue);
-  const createdTimeWhere = createdRange ? { createdAt: createdRange } : {};
-  const updatedTimeWhere = updatedRange ? { updatedAt: updatedRange } : {};
-  const where = {
-    AND: [
-      access,
-      filters.category ? { category: filters.category as "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH" } : {},
-      filters.ownership === "PUBLIC" ? { isPublicPool: true } : filters.ownership === "TRACKED" ? { isPublicPool: false } : {},
-      params.quick === "today" ? { createdAt: { gte: todayStart } } : params.quick === "week" ? { createdAt: { gte: weekStart } } : params.quick === "mine" ? { isPublicPool: false, ownerId: user.id } : params.quick === "collaborative" ? { isPublicPool: false, collaborators: { some: { userId: user.id } } } : params.quick === "public" ? { isPublicPool: true } : {},
-      q ? { OR: [
-        { name: { contains: q, mode: "insensitive" as const } },
-        { contact: { contains: q, mode: "insensitive" as const } },
-        { phone: { contains: q } },
-        { industry: { contains: q, mode: "insensitive" as const } },
-        { contactInfo: { contains: q, mode: "insensitive" as const } },
-        { pendingOwnerName: { contains: q, mode: "insensitive" as const } },
-        { owner: { is: { name: { contains: q, mode: "insensitive" as const } } } },
-        { collaborators: { some: { user: { name: { contains: q, mode: "insensitive" as const } } } } },
-        { contactMethods: { some: { value: { contains: q, mode: "insensitive" as const } } } },
-      ] } : {},
-      params.customerName ? { name: { contains: params.customerName, mode: "insensitive" as const } } : {},
-      params.contactQuery ? { contact: { contains: params.contactQuery, mode: "insensitive" as const } } : {},
-      params.phoneQuery ? { phone: { contains: params.phoneQuery } } : {},
-      params.collaboratorId ? { collaborators: { some: { userId: params.collaboratorId } } } : {},
-      filters.status ? { status: filters.status as "POTENTIAL" | "INITIAL_CONTACT" | "FOLLOWING" | "WON" | "LOYAL" } : {},
-      filters.nature ? { nature: filters.nature } : {},
-      filters.ownerId ? { OR: [{ ownerId: filters.ownerId }, { collaborators: { some: { userId: filters.ownerId } } }] } : {},
-      filters.businessLine ? { businessLine: filters.businessLine as "ENVIRONMENTAL_MONITORING" | "PUBLIC_HEALTH" | "OCCUPATIONAL_HEALTH" } : {},
-      filters.industry ? { industry: { contains: filters.industry, mode: "insensitive" as const } } : {},
-      createdTimeWhere,
-      updatedTimeWhere,
-    ],
-  };
+  const where = customerWhere(user, params);
   const [items, total, salesUsers] = await Promise.all([
     db.customer.findMany({
       where,
