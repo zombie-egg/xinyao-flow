@@ -27,6 +27,21 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          sshpass -e ssh "$SSH_USER@$SSH_HOST" '
+            set +e
+            namespace=environment-6a7da4faf8fa433a2b5dfa7b
+            echo "=== Pod status and restarts ==="
+            sudo k3s kubectl -n "$namespace" get pods -o custom-columns="NAME:.metadata.name,PHASE:.status.phase,RESTARTS:.status.containerStatuses[0].restartCount,TERMINATION:.status.containerStatuses[0].lastState.terminated.reason"
+            echo "=== Pod resource usage ==="
+            sudo k3s kubectl -n "$namespace" top pods
+            echo "=== Persistent volume free space ==="
+            sudo k3s kubectl -n "$namespace" exec deployment/xinyao-postgres -- df -Pk /var/lib/postgresql/data | tail -1
+            sudo k3s kubectl -n "$namespace" exec deployment/xinyao-flow -- df -Pk /data/uploads | tail -1
+            echo "=== Recent cluster warning events ==="
+            sudo k3s kubectl -n "$namespace" get events --field-selector type=Warning --sort-by=.lastTimestamp | tail -20
+            echo "=== Sanitized application error-category counts (72h) ==="
+            sudo k3s kubectl -n "$namespace" logs deployment/xinyao-flow --since=72h 2>&1 | grep -Eio "P[0-9]{4}|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOSPC|ENOMEM|EPIPE|SIGTERM|SIGKILL|OOMKilled|out of memory|heap out of memory|timed? out|502|503|504|413|PrismaClient[A-Za-z]*" | sort | uniq -c
+          '
           sshpass -e scp deploy/zeabur.yaml "$SSH_USER@$SSH_HOST:/tmp/xinyao-zeabur.yaml"
           tar --exclude=node_modules --exclude=.next --exclude=.git --exclude=.env --exclude=.codex-tmp --exclude=outputs -czf /tmp/xinyao-source.tgz .
           sshpass -e scp /tmp/xinyao-source.tgz "$SSH_USER@$SSH_HOST:/tmp/xinyao-source.tgz"
