@@ -70,4 +70,19 @@ describe("订单提交请求", () => {
     } satisfies Partial<OrderSubmissionError>);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+
+  it("编辑订单的 PATCH 请求失败时不自动重发，避免重复副作用", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(submitOrderRequest(
+      "/api/orders/order-1",
+      "PATCH",
+      new FormData(),
+      { fetcher, retryDelayMs: 0 },
+    )).rejects.toMatchObject({
+      name: "OrderSubmissionError",
+      message: expect.stringContaining("请先刷新订单或草稿"),
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
 });
