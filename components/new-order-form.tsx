@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { orderNameOptions } from "@/lib/order-input";
 import { calculateNetAmountCents, centsToMoney } from "@/lib/money";
+import { OrderSubmissionError, submitOrderRequest } from "@/lib/order-submission";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,6 +24,12 @@ type Staff = {
   employeeNumber: string | null;
   department: { code: string; name: string } | null;
   role: { code: string };
+};
+type OrderSubmissionData = {
+  id: string;
+  orderNumber?: string;
+  name?: string;
+  customerName?: string;
 };
 export type OrderFormInitial = {
   category: "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH";
@@ -216,7 +223,7 @@ export function NewOrderForm({
     [customerSearch, setCustomerSearch] = useState(""),
     [message, setMessage] = useState(""),
     [duplicateOrder, setDuplicateOrder] = useState<{ id: string; orderNumber: string; name: string; customerName: string } | null>(null),
-    [loading, setLoading] = useState(false),
+    [loadingIntent, setLoadingIntent] = useState<"SUBMIT" | "DRAFT" | null>(null),
     [showReceivable, setShowReceivable] = useState(true),
     [receivableTouched, setReceivableTouched] = useState(Boolean(initial?.receivable)),
     [receivableAmount, setReceivableAmount] = useState(initial?.receivable?.amount || initial?.amount || ""),
@@ -277,28 +284,45 @@ export function NewOrderForm({
       setMessage("请先选择或创建客户");
       return;
     }
-    setLoading(true);
     const form = new FormData(e.currentTarget);
     form.set("customerId", customerId);
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-    form.set("intent", submitter?.value || "SUBMIT");
+    const intent = submitter?.value === "DRAFT" ? "DRAFT" : "SUBMIT";
+    form.set("intent", intent);
+    setLoadingIntent(intent);
+    setMessage("");
     try {
-      const res = await fetch(orderId ? `/api/orders/${orderId}` : "/api/orders", {
-          method: orderId ? "PATCH" : "POST",
-          body: form,
-        }),
-        body = await res.json();
+      const { response: res, body } = await submitOrderRequest<OrderSubmissionData>(
+        orderId ? `/api/orders/${orderId}` : "/api/orders",
+        orderId ? "PATCH" : "POST",
+        form,
+        {
+          onRetry: () => setMessage("连接短暂中断，正在自动重试…"),
+        },
+      );
       if (!res.ok) {
-        if (body.code === "CONTRACT_NUMBER_EXISTS" && body.data) setDuplicateOrder(body.data);
+        if (
+          body.code === "CONTRACT_NUMBER_EXISTS" && body.data?.orderNumber &&
+          body.data.name && body.data.customerName
+        ) setDuplicateOrder({
+          id: body.data.id,
+          orderNumber: body.data.orderNumber,
+          name: body.data.name,
+          customerName: body.data.customerName,
+        });
         setMessage(body.message || "提交失败，请检查填写内容");
         return;
       }
+      if (!body.data?.id) throw new OrderSubmissionError("服务器返回成功，但缺少订单编号，请刷新订单列表确认保存结果。");
       router.push(`/orders/${body.data.id}`);
       router.refresh();
-    } catch {
-      setMessage("网络或服务器响应异常，请稍后重试");
+    } catch (error) {
+      const message = error instanceof OrderSubmissionError
+        ? `${error.message}${error.requestId ? `（请求编号：${error.requestId}）` : ""}`
+        : "订单服务连接中断，请先确认订单是否已保存后再重试。";
+      setMessage(message);
     } finally {
-      setLoading(false);
+      setLoadingIntent(null);
     }
   }
   const today = new Date().toLocaleDateString("en-CA", {
@@ -619,15 +643,15 @@ export function NewOrderForm({
           </div>
         </div>
         <div className="mt-5">
-          <Button name="intent" value="SUBMIT" disabled={loading || (netAmountCents ?? 0) < 0 || !showReceivable}>
-            {loading
+          <Button name="intent" value="SUBMIT" disabled={loadingIntent !== null || (netAmountCents ?? 0) < 0 || !showReceivable}>
+            {loadingIntent === "SUBMIT"
               ? "正在提交…"
               : orderId
                 ? "保存修改并重新提交审核"
                 : "提交订单审核"}
           </Button>
-          <Button type="submit" name="intent" value="DRAFT" variant="outline" disabled={loading}>
-            {loading ? "正在保存…" : "保存草稿"}
+          <Button type="submit" name="intent" value="DRAFT" variant="outline" disabled={loadingIntent !== null}>
+            {loadingIntent === "DRAFT" ? "正在保存…" : "保存草稿"}
           </Button>
           {message && (
             <span className="ml-3 text-sm text-zinc-500">{message}</span>
