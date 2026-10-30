@@ -14,6 +14,10 @@ use the same live database and files.
 
 Service units: `xinyao-app`, `xinyao-db-tunnel`, `xinyao-uploads`, `nginx`.
 Secrets are root-readable under `/etc/xinyao`; no application secrets belong in Git.
+`APP_URL` must be `https://xinyao.alag.cn` so authentication redirects use the
+public origin behind Nginx. Nginx also rewrites legacy redirects from
+`localhost:8080` to the public HTTPS origin. Verify `/` with redirects enabled,
+as testing `/login` alone does not exercise the authentication redirect.
 
 Pushes to `main` deploy only the application. A restricted SSH key stored in
 the GitHub secret `TENCENT_DEPLOY_KEY` can invoke only the deployment gateway.
