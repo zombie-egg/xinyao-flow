@@ -1,6 +1,6 @@
 # Tencent Cloud deployment
 
-Application server: `82.157.149.167`. Intended domain: `xinyao.agal.cn`.
+Application server: `82.157.149.167`. HTTPS domain: `xinyao.alag.cn`.
 
 PostgreSQL remains on `101.32.241.158`, in the existing Zeabur namespace
 `environment-6a7da4faf8fa433a2b5dfa7b`. The second namespace is untouched.
