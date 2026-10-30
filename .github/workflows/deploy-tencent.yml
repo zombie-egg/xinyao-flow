@@ -1,0 +1,35 @@
+name: Deploy application to Tencent Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-tencent
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy application without changing the database
+        env:
+          DEPLOY_KEY: ${{ secrets.TENCENT_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/xinyao-tencent
+          printf '%s\n' '82.157.149.167 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJd6PYEz3KZ+iL0g4dSCoShuDNl3gFqteaP8f/5nquxg' > ~/.ssh/known_hosts
+          tar --exclude=node_modules --exclude=.next --exclude=.git --exclude='.env*' \
+            --exclude=./uploads --exclude=./public/uploads --exclude=./certificates --exclude=./logs \
+            -czf /tmp/xinyao-source.tgz .
+          ssh -i ~/.ssh/xinyao-tencent -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=6 \
+            ubuntu@82.157.149.167 "$GITHUB_SHA" < /tmp/xinyao-source.tgz
