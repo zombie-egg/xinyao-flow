@@ -1,19 +1,13 @@
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
-import { saveUpload } from "@/lib/uploads";
+import { readFormAttachments, saveAttachmentBundle } from "@/lib/attachment-storage";
 import { z } from "zod";
 export const runtime = "nodejs";
 const schema = z.object({
   required: z.enum(["YES", "NO"]),
   note: z.string().trim().max(1000).optional(),
 });
-const types = new Map([
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-  ["application/pdf", "pdf"],
-]);
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -27,7 +21,7 @@ export async function POST(
     } catch (error) {
       console.error("发票上传表单解析失败", error);
       return fail(
-        "发票文件过大或上传格式无效，请压缩文件后重试",
+        "发票表单解析失败，请检查网络后重试",
         "INVALID_MULTIPART",
         400,
       );
@@ -43,35 +37,11 @@ export async function POST(
       return fail("销售尚未提交开票申请", "INVOICE_APPLICATION_REQUIRED", 409);
     if (order.invoiceStatus === "COMPLETED")
       return fail("发票事项已经处理", "ALREADY_PROCESSED", 409);
-    const file = form.get("invoice"),
-      required = p.data.required === "YES";
-    if (required && (!(file instanceof File) || !file.size))
+    const required = p.data.required === "YES";
+    const files = await readFormAttachments(form, "invoice", u.id, "invoices");
+    if (required && !files.length)
       return fail("需要开发票时必须上传发票文件", "INVOICE_FILE_REQUIRED");
-    let fileData = {
-      fileUrl: null as string | null,
-      fileName: null as string | null,
-      fileSize: null as number | null,
-      fileType: null as string | null,
-    };
-    if (file instanceof File && file.size) {
-      if (!types.has(file.type))
-        return fail("发票仅支持图片或 PDF", "INVALID_FILE_TYPE");
-      if (file.size > 8 * 1024 * 1024)
-        return fail("发票文件不能超过 8MB", "FILE_TOO_LARGE");
-      const fileUrl = await saveUpload(file, {
-        prefix: "invoice",
-        subdirectory: "invoices",
-        types,
-        maxBytes: 8 * 1024 * 1024,
-        optimizeImage: true,
-      });
-      fileData = {
-        fileUrl,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-      };
-    }
+    const fileData = await saveAttachmentBundle(files, "invoices");
     const result = await db.$transaction(async (tx) => {
       await tx.invoice.upsert({
         where: { orderId: id },

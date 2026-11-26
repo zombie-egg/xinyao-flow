@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { AttachmentUpload } from "./attachment-upload";
+import type { UploadedAttachment } from "@/lib/attachments";
 import { useMemo, useState } from "react";
 import { orderNameOptions } from "@/lib/order-input";
 import { calculateNetAmountCents, centsToMoney } from "@/lib/money";
@@ -32,6 +34,7 @@ type OrderSubmissionData = {
   customerName?: string;
 };
 export type OrderFormInitial = {
+  contractAttachments?: UploadedAttachment[];
   category: "XINYAO_ENVIRONMENT" | "OCCUPATIONAL_HEALTH";
   customerId: string;
   contractNumber: string | null;
@@ -543,16 +546,7 @@ export function NewOrderForm({
           </label>
           <label className="text-sm md:col-span-2">
             <RequiredLabel>合同附件</RequiredLabel>
-            <Input
-              name="contract"
-              type="file"
-              accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp"
-              className="mt-2 h-auto py-2"
-              required={false}
-            />
-            <span className="mt-1 block text-xs text-zinc-500">
-              支持 PDF、Word、JPG、PNG、WEBP，最大 10MB。
-            </span>
+            <AttachmentUpload name="contract" category="contracts" initial={initial?.contractAttachments} />
           </label>
         </div>
       </Card>

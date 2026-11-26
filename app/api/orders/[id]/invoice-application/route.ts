@@ -2,25 +2,12 @@ import { hasSalesCapabilities } from "@/lib/customer-access";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
-import { saveUpload } from "@/lib/uploads";
+import { readFormAttachments, saveAttachmentBundle } from "@/lib/attachment-storage";
 import { z } from "zod";
 export const runtime = "nodejs";
 const schema = z.object({
   note: z.string().trim().min(2, "请填写开票内容或备注").max(2000),
 });
-const types = new Map([
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-  ["application/pdf", "pdf"],
-  ["application/msword", "doc"],
-  [
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "docx",
-  ],
-  ["application/vnd.ms-excel", "xls"],
-  ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"],
-]);
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -42,29 +29,18 @@ export async function POST(
       order.invoiceApplicationStatus !== "PENDING"
     )
       return fail("当前订单不能申请开票", "INVALID_STATE", 409);
-    const file = form.get("invoiceInfo");
-    if (!(file instanceof File) || !file.size)
-      return fail("请上传开票信息文件", "INVOICE_INFO_REQUIRED");
-    if (!types.has(file.type))
-      return fail("开票信息支持图片、PDF、Word 或 Excel", "INVALID_FILE_TYPE");
-    if (file.size > 8 * 1024 * 1024)
-      return fail("开票信息文件不能超过 8MB", "FILE_TOO_LARGE");
-    const fileUrl = await saveUpload(file, {
-      prefix: "invoice-application",
-      subdirectory: "invoice-applications",
-      types,
-      maxBytes: 8 * 1024 * 1024,
-      optimizeImage: true,
-    });
+    const files = await readFormAttachments(form, "invoiceInfo", user.id, "invoice-applications");
+    if (!files.length) return fail("请上传开票信息文件", "INVOICE_INFO_REQUIRED");
+    const fileData = await saveAttachmentBundle(files, "invoice-applications");
     const result = await db.$transaction(async (tx) => {
       const item = await tx.order.update({
         where: { id },
         data: {
           invoiceApplicationStatus: "COMPLETED",
-          invoiceApplicationFileUrl: fileUrl,
-          invoiceApplicationFileName: file.name,
-          invoiceApplicationFileSize: file.size,
-          invoiceApplicationFileType: file.type,
+          invoiceApplicationFileUrl: fileData.fileUrl,
+          invoiceApplicationFileName: fileData.fileName,
+          invoiceApplicationFileSize: fileData.fileSize,
+          invoiceApplicationFileType: fileData.fileType,
           invoiceApplicationNote: p.data.note,
           invoiceAppliedAt: new Date(),
           invoiceStatus: "PENDING",

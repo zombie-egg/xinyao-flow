@@ -1,3 +1,4 @@
+import { AttachmentLinks } from "@/components/attachment-links";
 import { requirePermission } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader, Empty } from "@/components/page";
@@ -62,15 +63,7 @@ export default async function Invoices({
                 <p className="mt-1 text-sm text-zinc-500">
                   订单金额：{money(Number(x.amount))}
                 </p>
-                {x.invoiceApplicationFileUrl && (
-                  <a
-                    href={x.invoiceApplicationFileUrl}
-                    target="_blank"
-                    className="mt-2 inline-block text-sm underline"
-                  >
-                    查看开票信息
-                  </a>
-                )}
+                <AttachmentLinks url={x.invoiceApplicationFileUrl} name={x.invoiceApplicationFileName || "查看开票信息"} />
                 {x.invoiceApplicationNote && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-500">
                     开票内容：{x.invoiceApplicationNote}

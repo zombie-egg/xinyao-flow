@@ -1,4 +1,5 @@
 "use client";
+import { AttachmentUpload } from "./attachment-upload";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -237,13 +238,6 @@ export function InvoiceForm({ id }: { id: string }) {
     setMessage("发票事项已完成");
     router.refresh();
   }
-  function checkFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file && file.size > 8 * 1024 * 1024) {
-      e.target.value = "";
-      setMessage("发票文件不能超过 8MB，请压缩后重试");
-    } else setMessage("");
-  }
   return (
     <form onSubmit={submit} className="space-y-3">
       <select
@@ -256,13 +250,7 @@ export function InvoiceForm({ id }: { id: string }) {
         <option value="NO">不开发票</option>
       </select>
       {required === "YES" && (
-        <Input
-          name="invoice"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,.pdf"
-          onChange={checkFile}
-          required
-        />
+        <AttachmentUpload name="invoice" category="invoices" required />
       )}
       <Input name="note" placeholder="发票备注" />
       <Button>完成发票处理</Button>
@@ -296,12 +284,7 @@ export function InvoiceApplicationForm({ id }: { id: string }) {
       <p className="text-sm text-zinc-500">
         上传开票资料并填写开票内容，提交后进入财务发票待办。
       </p>
-      <Input
-        name="invoiceInfo"
-        type="file"
-        accept="image/jpeg,image/png,image/webp,.pdf,.doc,.docx,.xls,.xlsx"
-        required
-      />
+      <AttachmentUpload name="invoiceInfo" category="invoice-applications" required />
       <textarea
         name="note"
         required
@@ -325,9 +308,10 @@ export function PaymentForm({
     [message, setMessage] = useState("");
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
     const res = await fetch(`/api/orders/${id}/payments`, {
         method: "POST",
-        body: new FormData(e.currentTarget),
+        body: new FormData(form),
       }),
       body = await res.json();
     if (!res.ok) {
@@ -335,7 +319,7 @@ export function PaymentForm({
       return;
     }
     setMessage("回款已登记");
-    e.currentTarget.reset();
+    form.reset();
     router.refresh();
   }
   return (
@@ -353,12 +337,7 @@ export function PaymentForm({
         required
       />
       <Input name="reference" placeholder="流水号或票据编号" />
-      <Input
-        name="receipt"
-        type="file"
-        accept="image/jpeg,image/png,image/webp,.pdf"
-        required
-      />
+      <AttachmentUpload name="receipt" category="payments" required />
       <Input name="note" placeholder="回款备注" />
       <Button>登记本次回款</Button>
       {message && <p className="text-sm text-zinc-500">{message}</p>}

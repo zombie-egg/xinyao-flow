@@ -1,3 +1,4 @@
+import { AttachmentLinks } from "@/components/attachment-links";
 import { hasSalesCapabilities } from "@/lib/customer-access";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -157,17 +158,7 @@ export default async function OrderDetail({
           {order.contract.expenseDetails&&<p className="mt-4 whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-sm">费用明细备注：{order.contract.expenseDetails}</p>}
           {order.contract.originalExpenseNote&&<p className="mt-3 whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-sm">原技术支持/外包/评审费：{order.contract.originalExpenseNote}</p>}
           {canChangeSigningStatus && <ContractSigningStatusAction id={id} status={order.contract.signingStatus} />}
-          {order.contract.fileUrl ? (
-            <a
-              href={order.contract.fileUrl}
-              target="_blank"
-              className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-medium"
-            >
-              查看或下载：{order.contract.fileName || "合同文件"}
-            </a>
-          ) : (
-            <p className="mt-4 text-sm text-zinc-500">未上传合同</p>
-          )}
+          <AttachmentLinks url={order.contract.fileUrl} name={order.contract.fileName} empty="未上传合同" />
         </Card>
         <Card>
           <h2 className="font-medium">财务信息</h2>
@@ -239,43 +230,19 @@ export default async function OrderDetail({
               <p className="mt-1 font-medium">{money(remaining)}</p>
             </div>
           </div>
-          {order.invoiceApplicationFileUrl && (
-            <a
-              href={order.invoiceApplicationFileUrl}
-              target="_blank"
-              className="mt-4 inline-block text-sm underline"
-            >
-              查看销售上传的开票信息
-            </a>
-          )}
+          <AttachmentLinks url={order.invoiceApplicationFileUrl} name={order.invoiceApplicationFileName || "查看销售上传的开票信息"} />
           {order.invoiceApplicationNote && (
             <p className="mt-3 whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-sm">
               开票备注：{order.invoiceApplicationNote}
             </p>
           )}
-          {order.invoice?.fileUrl && (
-            <a
-              href={order.invoice.fileUrl}
-              target="_blank"
-              className="mt-4 inline-block text-sm underline"
-            >
-              查看发票文件
-            </a>
-          )}
+          <AttachmentLinks url={order.invoice?.fileUrl} name={order.invoice?.fileName || "查看发票文件"} />
           <div className="mt-4 space-y-2">
             {order.payments.map((p) => (
               <div key={p.id} className="rounded-lg bg-zinc-50 p-3 text-sm">
                 {dateTime(p.createdAt)} · {money(Number(p.amount))} ·{" "}
                 {p.financeUser?.name || "财务"}{" "}
-                {p.receiptUrl && (
-                  <a
-                    href={p.receiptUrl}
-                    target="_blank"
-                    className="ml-2 underline"
-                  >
-                    查看票据
-                  </a>
-                )}
+                <AttachmentLinks url={p.receiptUrl} name={p.receiptName || "查看票据"} />
               </div>
             ))}
           </div>

@@ -1,3 +1,4 @@
+import { signAttachment, storedAttachments } from "@/lib/attachment-storage";
 import { hasSalesCapabilities } from "@/lib/customer-access";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
@@ -61,6 +62,7 @@ export default async function EditRejectedOrder({
     redirect(`/orders/${id}`);
 
   const initial: OrderFormInitial = {
+    contractAttachments: (await storedAttachments(order.contract.fileUrl, order.contract.fileName)).map(file => signAttachment(file, user.id)),
     category: order.category,
     customerId: order.customerId,
     contractNumber: order.contract.contractNumber,

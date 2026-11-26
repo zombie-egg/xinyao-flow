@@ -2,8 +2,8 @@ import { hasSalesCapabilities } from "@/lib/customer-access";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
-import { saveUpload } from "@/lib/uploads";
-import { contractFileTypes, orderFormSchema } from "@/lib/order-input";
+import { readFormAttachments, saveAttachmentBundle } from "@/lib/attachment-storage";
+import { orderFormSchema } from "@/lib/order-input";
 import { calculateNetAmount } from "@/lib/money";
 import { duplicateOrderNumberResponse, findOrderByNumber } from "@/lib/order-number";
 
@@ -73,7 +73,7 @@ export async function PATCH(
     try {
       form = await req.formData();
     } catch {
-      return fail("订单文件过大或表单格式无效", "INVALID_MULTIPART", 400);
+      return fail("订单表单解析失败，请检查网络后重试", "INVALID_MULTIPART", 400);
     }
     const parsed = orderFormSchema.safeParse(Object.fromEntries(form.entries()));
     if (!parsed.success)
@@ -120,31 +120,11 @@ export async function PATCH(
     if (!financeCollaborator)
       return fail("订单协同人只能选择财务人员", "INVALID_CONTRACT_COLLABORATOR", 400);
 
-    const uploaded = form.get("contract");
-    let fileData: {
-      fileUrl?: string;
-      fileName?: string;
-      fileSize?: number;
-      fileType?: string;
-    } = {};
-    if (uploaded instanceof File && uploaded.size) {
-      if (!contractFileTypes.has(uploaded.type))
-        return fail("合同仅支持 PDF、Word、JPG、PNG、WEBP", "INVALID_FILE_TYPE");
-      if (uploaded.size > 10 * 1024 * 1024)
-        return fail("合同文件不能超过 10MB", "FILE_TOO_LARGE");
-      fileData = {
-        fileUrl: await saveUpload(uploaded, {
-          prefix: "contract",
-          subdirectory: "contracts",
-          types: contractFileTypes,
-          maxBytes: 10 * 1024 * 1024,
-          optimizeImage: true,
-        }),
-        fileName: uploaded.name,
-        fileSize: uploaded.size,
-        fileType: uploaded.type,
-      };
-    }
+    const hasAttachments = form.has("contractAttachments") || form.getAll("contract").some(file => file instanceof File && file.size);
+    const files = await readFormAttachments(form, "contract", user.id, "contracts");
+    if (!saveDraft && !(hasAttachments ? files.length : order.contract.fileUrl))
+      return fail("请上传合同文件", "CONTRACT_REQUIRED");
+    const fileData = hasAttachments ? await saveAttachmentBundle(files, "contracts") : {};
 
     const managerCreated = user.role.code === "SALES_MANAGER" || user.role.code === "ADMIN";
     const approvalStatus = saveDraft ? "DRAFT" : managerCreated

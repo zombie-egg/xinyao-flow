@@ -2,8 +2,8 @@ import { hasSalesCapabilities } from "@/lib/customer-access";
 import { db } from "@/lib/db";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { ok, fail, apiError } from "@/lib/api";
-import { saveUpload } from "@/lib/uploads";
-import { contractFileTypes, orderFormSchema } from "@/lib/order-input";
+import { readFormAttachments, saveAttachmentBundle } from "@/lib/attachment-storage";
+import { orderFormSchema } from "@/lib/order-input";
 import { calculateNetAmount } from "@/lib/money";
 import { duplicateOrderNumberResponse, findOrderByNumber } from "@/lib/order-number";
 export const runtime = "nodejs";
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       form = await req.formData();
     } catch {
       return fail(
-        "订单文件过大或表单格式无效，请压缩文件后重试",
+        "订单表单解析失败，请检查网络后重试",
         "INVALID_MULTIPART",
         400,
       );
@@ -62,13 +62,9 @@ export async function POST(req: Request) {
     submittedContractNumber = p.data.contractNumber;
     const duplicate = await findOrderByNumber(p.data.contractNumber);
     if (duplicate) return duplicateOrderNumberResponse(duplicate);
-    const file = form.get("contract");
-    if (!saveDraft && (!(file instanceof File) || !file.size))
+    const files = await readFormAttachments(form, "contract", u.id, "contracts");
+    if (!saveDraft && !files.length)
       return fail("请上传合同文件", "CONTRACT_REQUIRED");
-    if (!saveDraft && file instanceof File && !contractFileTypes.has(file.type))
-      return fail("合同仅支持 PDF、Word、JPG、PNG、WEBP", "INVALID_FILE_TYPE");
-    if (!saveDraft && file instanceof File && file.size > 10 * 1024 * 1024)
-      return fail("合同文件不能超过 10MB", "FILE_TOO_LARGE");
     const customer = await db.customer.findUnique({
       where: { id: p.data.customerId },
       include: {
@@ -118,13 +114,7 @@ export async function POST(req: Request) {
     });
     if (!financeCollaborator)
       return fail("订单协同人只能选择财务人员", "INVALID_CONTRACT_COLLABORATOR", 400);
-    const fileUrl = saveDraft ? null : await saveUpload(file as File, {
-      prefix: "contract",
-      subdirectory: "contracts",
-      types: contractFileTypes,
-      maxBytes: 10 * 1024 * 1024,
-      optimizeImage: true,
-    });
+    const fileData = await saveAttachmentBundle(files, "contracts");
     const managerCreated = u.role.code === "SALES_MANAGER" || u.role.code === "ADMIN",
       approvalStatus = saveDraft ? "DRAFT" : managerCreated
         ? "PENDING_FINANCE"
@@ -175,10 +165,7 @@ export async function POST(req: Request) {
           expenseDetails: p.data.expenseDetails,
           originalExpenseNote: p.data.originalExpenseNote,
           contractDate: p.data.contractDate,
-          fileUrl,
-          fileName: file instanceof File && file.size ? file.name : null,
-          fileSize: file instanceof File && file.size ? file.size : null,
-          fileType: file instanceof File && file.size ? file.type : null,
+          ...fileData,
           status: saveDraft ? "DRAFT" : "SUBMITTED",
         },
       });
