@@ -62,7 +62,7 @@ export default async function EditRejectedOrder({
     redirect(`/orders/${id}`);
 
   const initial: OrderFormInitial = {
-    contractAttachments: (await storedAttachments(order.contract.fileUrl, order.contract.fileName)).map(file => signAttachment(file, user.id)),
+    contractAttachments: (await storedAttachments(order.contract.fileUrl, order.contract.fileName, { size: order.contract.fileSize, type: order.contract.fileType })).map(file => signAttachment(file, user.id)),
     category: order.category,
     customerId: order.customerId,
     contractNumber: order.contract.contractNumber,

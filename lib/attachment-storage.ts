@@ -85,10 +85,10 @@ export async function saveAttachmentBundle(files: Attachment[], category: Attach
   return { fileUrl: `/attachments/${category}/${id}`, fileName: `${files.length} 个附件`, fileSize: size <= 2147483647 ? size : null, fileType: "application/x-xinyao-attachments" };
 }
 
-export async function storedAttachments(url: string | null | undefined, name?: string | null): Promise<Attachment[]> {
+export async function storedAttachments(url: string | null | undefined, name?: string | null, legacy?: { size?: number | null; type?: string | null }): Promise<Attachment[]> {
   if (!url) return [];
   const match = bundlePattern.exec(url);
-  if (!match) return [{ url, name: name || "查看附件", size: 0, type: "" }];
+  if (!match) return [{ url, name: name || "查看附件", size: legacy?.size || 0, type: legacy?.type || "" }];
   const contents = await readFile(path.join(uploadRoot, match[1], `${match[2]}.attachments.json`), "utf8");
   return JSON.parse(contents) as Attachment[];
 }

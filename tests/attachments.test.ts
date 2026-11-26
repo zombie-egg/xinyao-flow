@@ -52,6 +52,8 @@ describe("业务多附件", () => {
   });
   it("兼容旧单附件，并避免大文件元数据溢出数据库 Int 字段", async () => {
     expect(await storage.storedAttachments("/uploads/contracts/legacy.pdf", "原合同.pdf")).toEqual([{ url: "/uploads/contracts/legacy.pdf", name: "原合同.pdf", size: 0, type: "" }]);
+    const preserved = await storage.storedAttachments("/uploads/contracts/legacy.pdf", "原合同.pdf", { size: 12345, type: "application/pdf" });
+    expect(await storage.saveAttachmentBundle(preserved, "contracts")).toMatchObject({ fileSize: 12345, fileType: "application/pdf" });
     const file = { url: `/uploads/contracts/${crypto.randomUUID()}.zip`, name: "大归档.zip", type: "application/zip", size: 3 * 1024 ** 3 };
     expect(await storage.saveAttachmentBundle([file], "contracts")).toMatchObject({ fileUrl: file.url, fileSize: null });
   });
